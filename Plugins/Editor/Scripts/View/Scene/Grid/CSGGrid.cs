@@ -302,6 +302,12 @@ namespace RealtimeCSG
 					gridOrientation.gridCenter		= parentCenter;
 				}
 			}
+            else if (GlobalGridPivot.mode == GlobalGridPivot.GlobalGridMode.Anchored)
+            {
+                Transform gridPivot = GlobalGridPivot.GetTransform();
+                gridOrientation.gridCenter = gridPivot.position;
+                gridOrientation.gridRotation = gridPivot.rotation;
+            }
 			
 			gridOrientation.gridOrthoXVisible	= false;
 			gridOrientation.gridOrthoYVisible	= false;

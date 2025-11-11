@@ -10,7 +10,7 @@ using RealtimeCSG.Foundation;
 using RealtimeCSG.Components;
 using UnityEditor.SceneManagement;
 #if UNITY_2018_3_OR_NEWER
-using UnityEditor.Experimental.SceneManagement;
+
 #endif
 
 namespace InternalRealtimeCSG
@@ -701,7 +701,7 @@ namespace InternalRealtimeCSG
 
 
 			Material renderMaterial = null;
-			PhysicMaterial physicsMaterial = null;
+			PhysicsMaterial physicsMaterial = null;
 			if (meshDescription.surfaceParameter != 0)
 			{
 				var obj = EditorUtility.InstanceIDToObject(meshDescription.surfaceParameter);
@@ -710,7 +710,7 @@ namespace InternalRealtimeCSG
 					switch (meshDescription.meshQuery.LayerParameterIndex)
 					{
 						case LayerParameterIndex.RenderMaterial:  { renderMaterial  = obj as Material; break; }
-						case LayerParameterIndex.PhysicsMaterial: { physicsMaterial = obj as PhysicMaterial; break; }
+						case LayerParameterIndex.PhysicsMaterial: { physicsMaterial = obj as PhysicsMaterial; break; }
 					}
 				}
 			}

@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using InternalRealtimeCSG;
 using RealtimeCSG.Legacy;
+using RealtimeCSGExtensions;
 
 namespace RealtimeCSG
 {
@@ -28,7 +29,8 @@ namespace RealtimeCSG
 		static int gridColorID = -1;
 		static int gridCenterColorID = -1;
 
-		static Material GridMaterial
+		//static Material GridMaterial
+		internal static Material GridMaterial
 		{
 			get
 			{
@@ -150,8 +152,15 @@ namespace RealtimeCSG
 			gridMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
 			
 			gridMaterial.SetPass(0); 
-			var gridMatrix = Matrix4x4.TRS(gridCenter, gridRotation, Vector3.one);
-			Graphics.DrawMeshNow(gridMesh, gridMatrix, 0);
+            // HACK?
+            // GridCenter X and Z are swapped when rendering for some reason. gridCenter values are still correct in world space.
+            Vector3 renderGridCenter = new(gridCenter.x, gridCenter.y, gridCenter.z);
+			var gridMatrix = Matrix4x4.TRS(renderGridCenter, gridRotation, Vector3.one);
+            //var gridMatrix = Matrix4x4.Translate(gridCenter);
+            
+            //Debug.Log("gridCenter: " + gridCenter);
+            //UnityEngine.Debug.DrawLine(gridCenter, gridCenter + Vector3.up, Color.red, .2f);
+            Graphics.DrawMeshNow(gridMesh, gridMatrix, 0);
 		}
 
 		public static bool          ForceGrid           = false;
@@ -278,7 +287,7 @@ namespace RealtimeCSG
 		{
 			if (camera == null)
 				return;
-
+            
 			var camera_position = camera.cameraToWorldMatrix.MultiplyPoint(MathConstants.zeroVector3);
 			var camera_forward	= camera.cameraToWorldMatrix.MultiplyVector(MathConstants.forwardVector3);
 			
@@ -302,11 +311,17 @@ namespace RealtimeCSG
 					gridOrientation.gridCenter		= parentCenter;
 				}
 			}
-            else if (GlobalGridPivot.mode == GlobalGridPivot.GlobalGridMode.Anchored)
+            else
             {
-                Transform gridPivot = GlobalGridPivot.GetTransform();
-                gridOrientation.gridCenter = gridPivot.position;
-                gridOrientation.gridRotation = gridPivot.rotation;
+                Transform gridPivot = GlobalGridPivot.GetActiveTransform();
+                if (gridPivot != null)
+                {
+                    // TODO:
+                    // HACK: position offset doesn't work or render accurately rn
+                    //gridOrientation.gridCenter = gridPivot.position;
+                    gridOrientation.gridCenter = new Vector3(0, gridPivot.position.y, 0);
+                    gridOrientation.gridRotation = gridPivot.rotation;
+                }
             }
 			
 			gridOrientation.gridOrthoXVisible	= false;

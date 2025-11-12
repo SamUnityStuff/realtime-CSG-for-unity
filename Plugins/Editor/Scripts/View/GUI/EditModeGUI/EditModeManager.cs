@@ -508,6 +508,14 @@ namespace RealtimeCSG
 			SelectionUtility.HandleEvents();
 			InitTools();
 
+            // Extension
+            {
+                if (RealtimeCSG.CSGSettings.EnableRealtimeCSG)
+                {
+                    RealtimeCSGExtensions.Editor.RCSGExtensionSceneGUI.UnderlayOnSceneGUI(sceneView);
+                }
+            }
+            
 			HandleBuilderEvents();
 			{
 				UpdateTool();
@@ -560,7 +568,7 @@ namespace RealtimeCSG
 					}
 				}
 			}
-
+            
 			int sceneWindowId	= GUIUtility.GetControlID (SceneWindowHash, FocusType.Passive);			
 			var sceneWindowType = Event.current.GetTypeForControl(sceneWindowId);
 			if (sceneWindowType == EventType.Repaint)
@@ -582,9 +590,11 @@ namespace RealtimeCSG
 			{
 				if (sceneView && sceneWindowType != EventType.Used && 
 					(!SceneDragToolManager.IsDraggingObjectInScene || EditMode == ToolEditMode.Surfaces))
-				{
+                {
 					if (currentEditorWindows.Count == 0)
 					{
+                        
+
 						try
 						{
 							Handles.BeginGUI();

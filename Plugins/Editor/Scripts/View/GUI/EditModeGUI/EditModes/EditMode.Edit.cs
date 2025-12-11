@@ -2190,10 +2190,20 @@ namespace RealtimeCSG
 						if (!sceneRect.Contains(Event.current.mousePosition))
 							break;
 
-						if (GUIUtility.hotControl != 0 ||
-							Event.current.button != 0 ||
-							(SelectionUtility.CurrentModifiers & EventModifiers.Alt) == EventModifiers.Alt)
+                        if (GUIUtility.hotControl != 0 ||
+                            Event.current.button != 0 ||
+                            (SelectionUtility.CurrentModifiers & EventModifiers.Alt) == EventModifiers.Alt)
+                        {
+                            // HACK: https://github.com/LogicalError/realtime-CSG-for-unity/issues/410
+                            {
+                                _editMode = EditMode.None;
+                                GUIUtility.hotControl = 0;
+                                GUIUtility.keyboardControl = 0;
+                                EditorGUIUtility.editingTextField = false;
+                            }
+                                
 							break;
+                        }
 
 						if (SelectionUtility.CurrentModifiers == EventModifiers.Shift)
 						{

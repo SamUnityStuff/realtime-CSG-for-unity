@@ -1758,9 +1758,19 @@ namespace RealtimeCSG
 							break;
 						//mouseWasDownNot0 = Event.current.button != 0;
 						//mouseIsDownNot0  = (Event.current.button != 0);
-						if (GUIUtility.hotControl != 0 ||
-							Event.current.button != 0)
+                        if (GUIUtility.hotControl != 0 ||
+                            Event.current.button != 0)
+                        {
+                            // HACK: https://github.com/LogicalError/realtime-CSG-for-unity/issues/410
+                            {
+                                toolEditMode = ToolEditMode.None;
+                                GUIUtility.hotControl = 0;
+                                GUIUtility.keyboardControl = 0;
+                                EditorGUIUtility.editingTextField = false;
+                            }
+                            
 							break;
+                        }
 
 						toolEditMode = ToolEditMode.None;
 						extraDeltaMovement = MathConstants.zeroVector3;
@@ -1842,6 +1852,15 @@ namespace RealtimeCSG
 								hoverOnBoundsCenter != -1 &&
 								hoverOnBoundsEdge != -1)*/
 							{
+                                
+                                // HACK: https://github.com/LogicalError/realtime-CSG-for-unity/issues/410
+                                {
+                                    toolEditMode = ToolEditMode.None;
+                                    GUIUtility.hotControl = 0;
+                                    GUIUtility.keyboardControl = 0;
+                                    EditorGUIUtility.editingTextField = false;
+                                }
+                                
 								SelectionUtility.DoSelectionClick(sceneView);
 								// We're doing manual selection, make sure to eat the event otherwise unity will run its own MouseUp for selection logic
 								Event.current.Use();

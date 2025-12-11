@@ -1,4 +1,5 @@
 #if UNITY_2021_3_OR_NEWER
+using RCSG.Plugins.Extensions.KeyedDirectory;
 using UnityEditor;
 using UnityEditor.Overlays;
 using UnityEditor.Toolbars;
@@ -17,7 +18,8 @@ namespace RealtimeCSG
 
     internal class EditorModeOverlay: ToolbarOverlay
     {
-        public const string iconPath = "Packages/com.prenominal.realtimecsg/Plugins/Editor/Resources/GUI/";
+        //public const string iconPath = "Packages/com.prenominal.realtimecsg/Plugins/Editor/Resources/GUI/";
+        public static string iconPath = KeyedDirectory.GetDirectory("RCSG_Icons");
         public const string _id = "RealtimeCSG";
 
         public EditorModeOverlay()

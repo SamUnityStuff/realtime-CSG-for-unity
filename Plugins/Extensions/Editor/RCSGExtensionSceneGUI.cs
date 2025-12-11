@@ -1,4 +1,5 @@
-﻿using RealtimeCSG;
+﻿using System.Collections.Generic;
+using RealtimeCSG;
 using RealtimeCSGExtensions;
 using UnityEditor;
 using UnityEngine;
@@ -82,6 +83,12 @@ namespace RealtimeCSGExtensions.Editor
     public static class RCSGExtensionSceneGUI
     {
         private static System.Action<Material> _activeMaterialAction = null;
+        public static List<RCSGGridPivot> framePivots = new();
+
+        public static void Register(RCSGGridPivot activePivot)
+        {
+            framePivots.Add(activePivot);
+        }
         public static void InitiateMaterialPickOperation(System.Action<Material> callback)
         {
             if (RealtimeCSG.CSGSettings.EnableRealtimeCSG == false)
@@ -131,7 +138,7 @@ namespace RealtimeCSGExtensions.Editor
                 bool selectedPivotIsActivePivot = hasSelectedPivot && (selectedPivot == activePivot);
 
                 {
-                    HandleUtility.pickGameObjectCustomPasses -= HandleUtilityOnPickGameObjectCustomPasses;
+                    //HandleUtility.pickGameObjectCustomPasses -= HandleUtilityOnPickGameObjectCustomPasses;
                     //HandleUtility.pickGameObjectCustomPasses += HandleUtilityOnPickGameObjectCustomPasses;
                 }
 
@@ -154,14 +161,7 @@ namespace RealtimeCSGExtensions.Editor
                     Vector2 guiSize = new(200, 100);
                     Handles.DrawDottedLine(position, guiCenter3D, 4f);
                     {
-                        var m = Handles.matrix;
-                        Handles.matrix = Matrix4x4.TRS(position, rotation, Vector3.one);
-                        Handles.DrawWireCube(Vector3.zero, new Vector3(1,0,1));
-                        Handles.DrawWireCube(Vector3.zero, new Vector3(2,0,2));
-                        Handles.DrawWireCube(Vector3.zero, new Vector3(3,0,3));
-                        Handles.DrawLine(new(-5,0,0), new(5,0,0));
-                        Handles.DrawLine(new(0,0,-5), new(0,0,5));
-                        Handles.matrix = m;
+                        DrawGridHandle(position, rotation, Color.white);
                     }
                     Handles.BeginGUI();
                     {
@@ -197,6 +197,21 @@ namespace RealtimeCSGExtensions.Editor
 
         }
 
+        static void DrawGridHandle(Vector3 position, Quaternion rotation, Color color)
+        {
+            var m = Handles.matrix;
+            Color c = Gizmos.color;
+            
+            Gizmos.color = color;
+            Handles.matrix = Matrix4x4.TRS(position, rotation, Vector3.one);
+            Handles.DrawWireCube(Vector3.zero, new Vector3(1,0,1));
+            Handles.DrawWireCube(Vector3.zero, new Vector3(2,0,2));
+            Handles.DrawWireCube(Vector3.zero, new Vector3(3,0,3));
+            Handles.DrawLine(new(-5,0,0), new(5,0,0));
+            Handles.DrawLine(new(0,0,-5), new(0,0,5));
+            Gizmos.color = c;
+            Handles.matrix = m;
+        }
         private static GameObject HandleUtilityOnPickGameObjectCustomPasses(Camera cam, int layers, Vector2 position, GameObject[] ignore, GameObject[] filter, out int materialIndex)
         {
             Debug.Log("running");

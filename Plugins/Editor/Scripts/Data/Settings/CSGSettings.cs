@@ -309,8 +309,9 @@ namespace RealtimeCSG
             {
                 Tools.hidden = false;
                 UnityGridManager.ShowGrid = CSGSettings.GridVisible;
-            } else
+            } else {
                 CSGSettings.GridVisible = UnityGridManager.ShowGrid;
+            }
             EditModeManager.UpdateTool();
             RealtimeCSG.CSGSettings.UpdateWireframeModes();
             RealtimeCSG.CSGSettings.Save();

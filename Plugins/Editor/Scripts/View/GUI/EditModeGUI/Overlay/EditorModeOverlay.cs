@@ -99,7 +99,7 @@ namespace RealtimeCSG
             //do nothing if clicking on an already clicked toggle button, and reactivate it
             if (!value)
                 value = true;
-            if (value)
+            if (value && !RealtimeCSG.CSGSettings.EnableRealtimeCSG) // avoid re-invoking if already enabled, since SetRealtimeCSGEnabled alters grid settings
                 RealtimeCSG.CSGSettings.SetRealtimeCSGEnabled(true);
             EditModeManager.EditMode = mode;
         }

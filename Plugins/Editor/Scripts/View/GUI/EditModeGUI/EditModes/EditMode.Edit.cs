@@ -2202,6 +2202,7 @@ namespace RealtimeCSG
                         {
                             // HACK: https://github.com/LogicalError/realtime-CSG-for-unity/issues/410
                             {
+                                //Debug.Log("SAM: Setting tool edit mode to none");
                                 _editMode = EditMode.None;
                                 GUIUtility.hotControl = 0;
                                 GUIUtility.keyboardControl = 0;

@@ -370,11 +370,19 @@ namespace RealtimeCSGExtensions
             {
                 // Grid visibility toggles //
                 EditorGUILayout.BeginHorizontal();
+#if false
+                bool _lastVisible = RealtimeCSG.CSGSettings.GridVisible;
+                bool _newVisible = ToggleButton("☐ CSG Grid", "☑ CSG Grid", _lastVisible, GUILayout.Width(150));
+                if (_lastVisible != _newVisible)
+                {
+                    RealtimeCSG.CSGSettings.GridVisible = _newVisible;
+                    //UnityGridManager.ShowGrid = !_newVisible; // hide unity grid when we're using CSG grid
+                }
+#else
                 {
                     GUILayout.Label("Show grids: ", GUILayout.ExpandWidth(false));
                     
                     bool csgGridEnabled = RealtimeCSG.CSGSettings.GridVisible;
-                    
                     bool lastUnityGridEnabled = false;
                     var views = UnityEditor.SceneView.sceneViews;
                     {
@@ -422,6 +430,7 @@ namespace RealtimeCSGExtensions
                         }
                     }
                 }
+#endif
                 EditorGUILayout.EndHorizontal();
                 GUILayout.Space(16);
                 

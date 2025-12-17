@@ -130,6 +130,7 @@ namespace RealtimeCSGExtensions.Editor
             
             // TODO:
             // Grid Pivot Stuff
+            #if false
             {
                 
                 RCSGGridPivot selectedPivot = target?.GetComponent<RCSGGridPivot>();
@@ -194,6 +195,7 @@ namespace RealtimeCSGExtensions.Editor
                     Handles.EndGUI();
                 }
             }
+            #endif
 
         }
 

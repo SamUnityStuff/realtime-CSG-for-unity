@@ -313,14 +313,26 @@ namespace RealtimeCSG
 			}
             else
             {
-                Transform gridPivot = GlobalGridPivot.GetActiveTransform();
-                if (gridPivot != null)
+                //if (gridPivot != null)
                 {
                     // TODO:
                     // HACK: position offset doesn't work or render accurately rn
                     //gridOrientation.gridCenter = gridPivot.position;
-                    gridOrientation.gridCenter = new Vector3(0, gridPivot.position.y, 0);
-                    gridOrientation.gridRotation = gridPivot.rotation;
+                    GlobalGridPivot.GetCurrentGridPositionAndRotation(out Vector3 gridPosition,
+                        out Quaternion gridRotation);
+                    
+                    // Error Checking
+                    {
+                        if (gridPosition.x != 0 || gridPosition.z != 0) { Debug.LogError($"Currently we only support moving the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridPivot)}."); }
+                        Vector3 eulerTest = gridRotation.eulerAngles;
+                        if (eulerTest.x != 0 || eulerTest.z != 0) { Debug.LogError($"Currently we only support rotating the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridPivot)}."); }
+                    }
+                    gridOrientation.gridCenter = new Vector3(0, gridPosition.y, 0);
+                    gridOrientation.gridRotation = gridRotation;
+                    // TODO: check gridWorkCenter
+                    
+                    //gridOrientation.gridCenter = new Vector3(0, gridPivot.position.y, 0);
+                    //gridOrientation.gridRotation = gridPivot.rotation;
                 }
             }
 			

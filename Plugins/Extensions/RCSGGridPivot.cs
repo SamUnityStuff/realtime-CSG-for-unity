@@ -9,30 +9,65 @@ namespace RealtimeCSGExtensions
     {
         public enum GlobalGridMode
         {
-            Origin, Anchored
+            Origin, Manual//, Anchored
         }
         public static GlobalGridMode mode = GlobalGridMode.Origin;
 
-        public static RCSGGridPivot currentlySelectedGridPivot;
 
-        public static RCSGGridPivot GetActiveGridPivot()
+        static Vector3 manualGridPosition;
+        static Quaternion manualGridRotation;
+        public static void HackOverrideManualPositionAndRotation(Vector3 gridPosition, Quaternion gridRotation)
         {
-            if (mode == GlobalGridMode.Origin) { return null; }
-
-            return currentlySelectedGridPivot;
-        }
-
-        public static void SetActiveGridPivot(RCSGGridPivot gridPivot)
-        {
-            mode = (gridPivot != null) ? GlobalGridMode.Anchored : GlobalGridMode.Origin;
-            currentlySelectedGridPivot = gridPivot;
+            manualGridPosition = gridPosition;
+            manualGridRotation = gridRotation;
         }
         
-        public static Transform GetActiveTransform()
+        //// TODO: support sloped grids and fix the problem with the grid shader that stops us from supporting that?
+        public static void GetCurrentGridPositionAndRotation(out Vector3 gridPosition, out Quaternion gridRotation)
         {
-            if (mode == GlobalGridMode.Origin) { return null; }
-            return currentlySelectedGridPivot?.transform;
+            switch (mode)
+            {
+                case GlobalGridMode.Origin:
+                {
+                    gridPosition = Vector3.zero;
+                    gridRotation = Quaternion.identity;
+                    return;
+                }
+                case GlobalGridMode.Manual:
+                {
+                    gridPosition = manualGridPosition;
+                    gridRotation = manualGridRotation;
+                    return;
+                }
+            }
+            
+            Debug.LogError("Something is very wrong");
+            gridPosition = Vector3.zero;
+            gridRotation = Quaternion.identity;
+            return;
         }
+        
+
+        // public static RCSGGridPivot currentlySelectedGridPivot;
+
+        // public static RCSGGridPivot GetActiveGridPivot()
+        // {
+        //     if (mode == GlobalGridMode.Origin) { return null; }
+        // 
+        //     return currentlySelectedGridPivot;
+        // }
+
+        // public static void SetActiveGridPivot(RCSGGridPivot gridPivot)
+        // {
+        //     mode = (gridPivot != null) ? GlobalGridMode.Anchored : GlobalGridMode.Origin;
+        //     currentlySelectedGridPivot = gridPivot;
+        // }
+
+        // public static Transform GetActiveTransform()
+        // {
+        //     if (mode == GlobalGridMode.Origin) { return null; }
+        //     return currentlySelectedGridPivot?.transform;
+        // }
     }
     public class RCSGGridPivot : MonoBehaviour
     {
@@ -47,8 +82,8 @@ namespace RealtimeCSGExtensions
         [MenuItem(menuItem, false)]
         void ContextMakeActivePivot()
         {
-            GlobalGridPivot.currentlySelectedGridPivot = this;
-            Debug.Log("made active!");
+            //GlobalGridPivot.currentlySelectedGridPivot = this;
+            Debug.Log("TODO: Implement making active!");
         }
 
         void OnDrawGizmos()

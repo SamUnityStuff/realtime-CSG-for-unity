@@ -350,9 +350,12 @@ namespace RealtimeCSGExtensions
             
         }
         
+        [System.Serializable]
         class TabStateAnchor
         {
-
+            // persist this state in-editor across reloads
+            private float hackManualGridPos;
+            private float hackManualGridRot;
             struct SceneAnchor
             {
                 //private GlobalGridPivot sourceObject;
@@ -361,10 +364,94 @@ namespace RealtimeCSGExtensions
             public void OnAwake_AnchorTab()
             {
             }
-            
+
+            static bool ToggleButton(string labelActivate, string labelDeactivate, bool curVal, params GUILayoutOption[] options)
+            {
+                string label = curVal ? labelDeactivate : labelActivate;
+                if (GUILayout.Button(label, options))
+                {
+                    curVal = !curVal;
+                }
+                return curVal;
+            }
             public void OnGUI_AnchorTab()
             {
+                // Grid visibility toggles //
+                EditorGUILayout.BeginHorizontal();
+                {
+                    GUILayout.Label("Show grids: ", GUILayout.ExpandWidth(false));
+                    
+                    bool csgGridEnabled = RealtimeCSG.CSGSettings.GridVisible;
+                    
+                    bool lastUnityGridEnabled = false;
+                    var views = UnityEditor.SceneView.sceneViews;
+                    {
+                        // TODO: don't do this every frame?
+                        for (int i = 0; i < views.Count; i++)
+                        {
+                            if(views[i] == null) continue;
+                            SceneView sceneView = views[i] as SceneView;
+                            if(sceneView == null) continue;
+                            if (sceneView.showGrid)
+                            {
+                                lastUnityGridEnabled = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    //GridVisibility startVisibility = GridVisibility.None;
+                    //if (csgGridEnabled) { startVisibility |= GridVisibility.CSGGrid; }
+                    //if (lastShowingSceneViewGrid) { startVisibility |= GridVisibility.UnityGrid; }
+                    //startVisibility = (GridVisibility)EditorGUILayout.EnumFlagsField("Grid Visibility", startVisibility);
+
+                    
+                    // Draw visibility Settings
+                    EditorGUILayout.BeginVertical();
+                    const float FIXED_WIDTH = 140;
+                    RealtimeCSG.CSGSettings.GridVisible = ToggleButton("☐ CSG Grid", "☑ CSG Grid", RealtimeCSG.CSGSettings.GridVisible, GUILayout.Width(FIXED_WIDTH));
+                    bool newUnityGridEnabled = ToggleButton("☐ Unity Grid", "☑ Unity Grid", lastUnityGridEnabled, GUILayout.Width(FIXED_WIDTH));
+                    EditorGUILayout.EndVertical();
+                    
+                    // Apply Unity visible
+                    {
+                        bool changedShowingSceneViewGrid = lastUnityGridEnabled != newUnityGridEnabled;
+                        // apply to all if changed
+                        if (changedShowingSceneViewGrid)
+                        {
+                            
+                            for (int i = 0; i < views.Count; i++)
+                            {
+                                if(views[i] == null) continue;
+                                SceneView sceneView = views[i] as SceneView;
+                                if(sceneView == null) continue;
+                                sceneView.showGrid = newUnityGridEnabled;
+                            }
+                        }
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+                GUILayout.Space(16);
+                
+                // Mode select //
                 GlobalGridPivot.mode = (GlobalGridPivot.GlobalGridMode)EditorGUILayout.EnumPopup("Grid Mode:", GlobalGridPivot.mode);
+                GUILayout.Space(8);
+                
+                // Context-dependent editor //
+                switch (GlobalGridPivot.mode)
+                {
+                    case GlobalGridPivot.GlobalGridMode.Origin: break;
+                    case GlobalGridPivot.GlobalGridMode.Manual:
+                    {
+                        hackManualGridPos = EditorGUILayout.FloatField("Grid Height:", hackManualGridPos);
+                        hackManualGridRot = EditorGUILayout.FloatField("Grid Rotation:", hackManualGridRot);
+                        GlobalGridPivot.HackOverrideManualPositionAndRotation(new Vector3(0, hackManualGridPos, 0), Quaternion.Euler(0, hackManualGridRot, 0));
+                    } break;
+                    // case GlobalGridPivot.GlobalGridMode.Anchored:
+                    // {
+                    //     GUILayout.Label("Scene anchors are not supported yet!");
+                    // } break;
+                }
             }
 
             public void OverlayOnSceneGUI()

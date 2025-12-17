@@ -42,10 +42,12 @@ namespace Sam.Editor
 	    static string[] creationOptions;
 	    static Dictionary<string, List<string[]>> contextOptions;
 
+        private static bool _registered = false;
 	    static SceneViewContextMenuInitializer()
-	    {
-            SceneView.onSceneGUIDelegate -= OnSceneGUI;
-            SceneView.onSceneGUIDelegate += OnSceneGUI;
+        {
+            SceneView.duringSceneGui -= OnSceneGUI;
+            SceneView.duringSceneGui += OnSceneGUI;
+            _registered = true;
         }
 
 	    [MenuItem("Window/SceneView Context Menu/Enable", true)] static bool EnableTest() { return !IsRegistered(); }
@@ -54,24 +56,32 @@ namespace Sam.Editor
 	    [MenuItem("Window/SceneView Context Menu/Enable")]
 	    static void Enable()
 	    {
-		    SceneView.onSceneGUIDelegate -= OnSceneGUI;
-		    SceneView.onSceneGUIDelegate += OnSceneGUI;
+		    SceneView.duringSceneGui -= OnSceneGUI;
+		    SceneView.duringSceneGui += OnSceneGUI;
+            _registered = true;
 	    }
 
 	    [MenuItem("Window/SceneView Context Menu/Disable")]
 	    static void Disable()
 	    {
-		    SceneView.onSceneGUIDelegate -= OnSceneGUI;
-	    }
+		    SceneView.duringSceneGui -= OnSceneGUI;
+            _registered = false;
+        }
 
 	    static bool IsRegistered()
-	    {
-		    var d = SceneView.onSceneGUIDelegate.GetInvocationList();
-		    for (int i = 0; i < d.Length; i++)
-			    if (d[i].Method.Name == "OnSceneGUI")
-				    return true;
-		    return false;
-	    }
+        {
+            // ENFORCE UNSUBSCRIPTION (likely unnecessary but i'm tired so ay)
+            if (!_registered) { SceneView.duringSceneGui -= OnSceneGUI; }
+            return _registered;
+            
+            // OLD IMPLEMENTATION WHEN USING onSceneGUIDelegate instead of duringSceneGui
+            //if (SceneView.onSceneGUIDelegate == null) { return false; }
+            //var d = SceneView.onSceneGUIDelegate.GetInvocationList();
+            //for (int i = 0; i < d.Length; i++)
+            //    if (d[i].Method.Name == "OnSceneGUI")
+            //	    return true;
+            //return false;
+        }
 
 	    // Parses EditorGUIUtility.SerializeMainMenuToString so we can use custom context menus for internal objects like Transforms. Also for copying the Creation menu drop down.
 	    static void InitMainMenuOptions()

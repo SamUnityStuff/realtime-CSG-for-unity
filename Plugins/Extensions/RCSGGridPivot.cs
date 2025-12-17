@@ -80,7 +80,7 @@ namespace RealtimeCSGExtensions
         }
 
         [MenuItem(menuItem, false)]
-        void ContextMakeActivePivot()
+        static void ContextMakeActivePivot()
         {
             //GlobalGridPivot.currentlySelectedGridPivot = this;
             Debug.Log("TODO: Implement making active!");

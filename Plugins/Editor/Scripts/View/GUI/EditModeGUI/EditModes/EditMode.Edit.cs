@@ -100,6 +100,12 @@ namespace RealtimeCSG
 
 		[SerializeField] private readonly TransformSelection    _transformSelection  = new TransformSelection();
 		[SerializeField] private readonly BrushSelection        _brushSelection      = new BrushSelection();
+        
+        // SAM ADDITION:
+        public BrushSelection GetBrushSelection()
+        {
+            return _brushSelection;
+        }
 
 		[SerializeField] private UnityEngine.Object[]   _undoAbleTransforms     = new UnityEngine.Object[0];
 		[SerializeField] private UnityEngine.Object[]   _undoAbleBrushes		= new UnityEngine.Object[0];

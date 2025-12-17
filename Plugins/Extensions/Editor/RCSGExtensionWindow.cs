@@ -2,11 +2,13 @@
 using System.Buffers;
 using System.Collections.Generic;
 using RealtimeCSG;
+using RealtimeCSG.Components;
 using RealtimeCSG.Legacy;
 using RealtimeCSGExtensions.Editor;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Pool;
 using UnityEngine.SceneManagement;
 
 namespace RealtimeCSGExtensions
@@ -30,6 +32,7 @@ namespace RealtimeCSGExtensions
         private static RCSGExtensionWindow _instance;
         private void OnEnable()
         {
+            this.titleContent = new GUIContent("RCSG Extension Tools");
             _instance = this;
         }
 
@@ -38,13 +41,10 @@ namespace RealtimeCSGExtensions
             _instance = null;
         }
 
-        enum Tabs
-        {
-            Anchors
-        }
+        enum Tabs { Construction, Surfaces }
+        Tabs curTab = Tabs.Construction;
+        private static string[] tabStrings = new[] { "Construction", "Surface Paint" };
 
-        private string[] tabStrings = new[] { "Grid Anchors" };
-        Tabs curTab = Tabs.Anchors;
         private Vector2 _mainScrollPos;
         static GUILayoutOption[] _expandHeight = new[] { GUILayout.ExpandHeight(true) };
 
@@ -64,20 +64,24 @@ namespace RealtimeCSGExtensions
 
         void OnGUI ()
         {
-            switch (RealtimeCSG.CSGSettings.EditMode)
-            {
-                case ToolEditMode.Surfaces:
-                    OnGUI_Surfaces();
-                    break;
-                case ToolEditMode.Edit:
-                case ToolEditMode.Generate:
-                case ToolEditMode.Place:
-                    OnGUI_Construction();
-                    break;
-                default:
-                    break;
-            }
+            curTab = (Tabs)GUILayout.Toolbar((int)curTab, tabStrings);
+            EditorGUILayoutUtility.HorizontalLine();
+            //EditorGUILayout.Separator();
             
+            // Main body
+            _mainScrollPos = EditorGUILayout.BeginScrollView(_mainScrollPos, false, false, _expandHeight);
+            {
+                switch (curTab)
+                {
+                    case Tabs.Construction:
+                        OnGUI_Construction();
+                        break;
+                    case Tabs.Surfaces:
+                        OnGUI_Surfaces();
+                        break;
+                }
+            }
+            EditorGUILayout.EndScrollView();
         }
 
         void OnGUI_Surfaces()
@@ -88,16 +92,12 @@ namespace RealtimeCSGExtensions
         
         void OnGUI_Construction()
         {
-            curTab = (Tabs)GUILayout.Toolbar((int)curTab, tabStrings);
-            EditorGUILayout.Separator();
-            _mainScrollPos = EditorGUILayout.BeginScrollView(_mainScrollPos, false, false, _expandHeight);
             switch (curTab)
             {
-                case Tabs.Anchors:
+                case Tabs.Construction:
                     tabStateAnchor.OnGUI_AnchorTab();
                     break;
             }
-            EditorGUILayout.EndScrollView();
         }
         void OnSceneGUI(SceneView sceneView)
         {
@@ -256,8 +256,6 @@ namespace RealtimeCSGExtensions
                         
                     }
                 }
-                
-                
             }
             
             class TabDirectionalPaint
@@ -267,20 +265,102 @@ namespace RealtimeCSGExtensions
                 static void DirectionallyPaintSurfaces(Material upMat, Material lateralMat, Material downMat)
                 {
                     const float ANGLE_THRESHOLD = .6f;
-                    var editModeSurface = EditModeManager.ActiveTool as EditModeSurface;
-                    if (editModeSurface == null)
+                    SelectedBrushSurface[] surfaces = null;
                     {
-                        EditModeManager.ShowMessage("Can't edit surfaces outside of surface mode yet (bother sam about this!)");
+                        var editModeSurface = EditModeManager.ActiveTool as EditModeSurface;
+                        if (editModeSurface != null)
+                        {
+                            surfaces = editModeSurface.GetSelectedSurfaces();
+                        }
+                        
+                        var editModePlace = EditModeManager.ActiveTool as EditModePlace;
+                        if (editModePlace != null)
+                        {
+                            // Early out: No selection!
+                            if (!editModePlace.HaveBrushSelection) { return; }
+                            
+                            ReadOnlySpan<CSGBrush> selectedBrushes = editModePlace.GetSelectedBrushes();
+                            
+                            // 1. Count surfaces
+                            int surfaceCount = 0;
+                            for (int i = 0; i < selectedBrushes.Length; i++)
+                            {
+                                var brush = selectedBrushes[i];
+                                surfaceCount += brush.Shape.Surfaces.Length;
+                            }
+                            
+                            // 2. Allocate surface pointers (TODO: make this not. a class?)
+                            surfaces = new SelectedBrushSurface[surfaceCount];
+                            
+                            // 3. Copy surfaces
+                            surfaceCount = 0;
+                            for (int idxSelectedBrush = 0; idxSelectedBrush < selectedBrushes.Length; idxSelectedBrush++)
+                            {
+                                var brush = selectedBrushes[idxSelectedBrush];
+                                var brushSurfaces = brush.Shape.Surfaces;
+                                for (int idxBrushSurface = 0; idxBrushSurface < brushSurfaces.Length; idxBrushSurface++)
+                                {
+                                    // TODO: add plane to this?
+                                    SelectedBrushSurface surfacePointer = new(brush, idxBrushSurface); 
+                                    surfaces[surfaceCount + idxBrushSurface] = surfacePointer;
+                                }
+                                surfaceCount += brush.Shape.Surfaces.Length;
+                            }
+                        }
+
+                        var editModeMeshEdit = EditModeManager.ActiveTool as EditModeMeshEdit;
+                        if (editModeMeshEdit != null)
+                        {
+                            var brushSelection = editModeMeshEdit.GetBrushSelection();
+                            // Early out: No selection!
+                            if (brushSelection == null) { return; }
+
+                            var sel_controlMeshes = brushSelection.ControlMeshes; 
+                            var sel_controlMeshStates = brushSelection.States; 
+                            var sel_shapes = brushSelection.Shapes;
+                            var sel_brushes = brushSelection.Brushes;
+                            if (sel_controlMeshStates.Length == 0) { return; }
+
+                            List<SelectedBrushSurface> builder = ListPool<SelectedBrushSurface>.Get(); // hacky but whatever
+                            builder.Clear();
+                            for (int idxSelection = 0; idxSelection < sel_controlMeshStates.Length; idxSelection++)
+                            {
+                                var controlMesh = sel_controlMeshes[idxSelection];
+                                var polygonStates = sel_controlMeshStates[idxSelection].Selection.Polygons;
+                                for (int idxPolygon = 0; idxPolygon < polygonStates.Length; idxPolygon++)
+                                {
+                                    if ((polygonStates[idxPolygon] & SelectState.Selected) != 0)
+                                    {
+                                        int texGenIndex = controlMesh.Polygons[idxPolygon].TexGenIndex;
+                                        // found a selected polygon! look up the surface and add if we can
+                                        // TODO: replace this texgen based lookup with something less stupid
+                                        var lookupSurfaces = sel_shapes[idxSelection].Surfaces;
+                                        for (int idxSurface = 0; idxSurface < lookupSurfaces.Length; idxSurface++) {
+                                            if (lookupSurfaces[idxSurface].TexGenIndex == texGenIndex) {
+                                                // found it!
+                                                builder.Add(new SelectedBrushSurface(sel_brushes[idxSelection], idxSurface)); // TODO: add plane?
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            surfaces = builder.ToArray(); // TODO: use a span + reusable buffer instead of re-allocating this every call?
+                            ListPool<SelectedBrushSurface>.Release(builder);
+                        }
+                        //editModePlace.brushes.Length
                     }
-                    var editModePlace = EditModeManager.ActiveTool as EditModePlace;
-                    //editModePlace.brushes.Length
+                    if (surfaces == null)
+                    {
+                        EditModeManager.ShowMessage($"Can't edit surfaces in the CSG edit mode {EditModeManager.ActiveTool.GetType().Name} (bother sam about this!)");
+                        return;
+                    }
 
                     // caching this to avoid the implicit unity lifetime checks in the equality operator
                     bool _hasUp = upMat != null;
                     bool _hasDown = downMat != null;
                     bool _hasLateral = lateralMat != null;
 
-                    var surfaces = editModeSurface.GetSelectedSurfaces();
                     Undo.IncrementCurrentGroup();
                     using (new UndoGroup(surfaces, "Replace surface materials"))
                     {
@@ -467,6 +547,38 @@ namespace RealtimeCSGExtensions
             void AddItemsToSceneHeaderContextMenu(GenericMenu menu, Scene scene)
             {
             }
+        }
+        
+        
+        // TODO: move this somewhere?
+        // https://gamedev.stackexchange.com/questions/167946/unity-editor-horizontal-line-in-inspector
+        public static class EditorGUILayoutUtility
+        {
+            public static readonly Color DEFAULT_COLOR = new Color(0f, 0f, 0f, 0.3f);
+            public static readonly Vector2 DEFAULT_LINE_MARGIN = new Vector2(2f, 2f);
+
+            public const float DEFAULT_LINE_HEIGHT = 1f;
+
+            public static void HorizontalLine(Color color, float height, Vector2 margin)
+            {
+                GUILayout.Space(margin.x);
+
+                EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, height), color);
+
+                GUILayout.Space(margin.y);
+            }
+            public static void HorizontalLine(Color color, float height) => EditorGUILayoutUtility.HorizontalLine(color, height, DEFAULT_LINE_MARGIN);
+            public static void HorizontalLine(Color color, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, margin);
+            public static void HorizontalLine(float height, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, margin);
+
+            public static void HorizontalLine(Color color) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
+            public static void HorizontalLine(float height) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, DEFAULT_LINE_MARGIN);
+            public static void HorizontalLine(Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, margin);
+
+            public static void HorizontalLine() => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
+
+#if UNITY_EDITOR
+#endif
         }
     }
 }

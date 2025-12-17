@@ -189,7 +189,13 @@ namespace RealtimeCSG
 		[SerializeField] Shape[]		backupShapes				= null;             // brush
 		[SerializeField] ControlMesh[]	backupControlMeshes			= null;             // brush
 		#endregion
-		
+
+        // SAM ADDITION:
+        public ReadOnlySpan<CSGBrush> GetSelectedBrushes()
+        {
+            return brushes.AsSpan();
+        }
+        
 		public void OnEnableTool()	{ toolIsEnabled = true;  Tools.hidden = shouldHideTool; ResetTool(); }
 		public void OnDisableTool()	{ toolIsEnabled = false; Tools.hidden = false; ResetTool(); }		
 

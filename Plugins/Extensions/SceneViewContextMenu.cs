@@ -309,11 +309,11 @@ namespace Sam.Editor
 			    menu.AddItem(new GUIContent(head + "/Reset Scale"), false, () => ForEach(Selection.gameObjects, x => { if (x.transform.parent != null) x.transform.localScale = Vector3.one; }));
 		    }
 
-		    var components = GameObject.FindObjectsOfType<Component>()
+		    var components = GameObject.FindObjectsByType<Component>(FindObjectsSortMode.None)
 			    .Distinct()
 			    .ToArray();
 		    
-		    var names = GameObject.FindObjectsOfType<Transform>()
+		    var names = GameObject.FindObjectsByType<Transform>(FindObjectsSortMode.None)
 			    .Select(x => x.name.Split(' ')[0])
 			    .Distinct()
 			    .ToArray();
@@ -416,7 +416,7 @@ namespace Sam.Editor
 	    static void SelectByComponent(Component component)
 	    {
 		    Selection.objects = GameObject
-			    .FindObjectsOfType(component.GetType())
+			    .FindObjectsByType(component.GetType(), FindObjectsSortMode.None)
 			    .Select(x => (x as Component).gameObject)
 			    .ToArray();
 	    }
@@ -424,7 +424,7 @@ namespace Sam.Editor
 	    // Deselects selected objects that have a component.
 	    static void DeselectByComponent(Component component)
 	    {
-		    var o = GameObject.FindObjectsOfType(component.GetType());
+		    var o = GameObject.FindObjectsByType(component.GetType(), FindObjectsSortMode.None);
 
 		    Selection.objects = Selection.objects
 			    .Where(x => x is Component && !o.Contains(x))
@@ -435,7 +435,7 @@ namespace Sam.Editor
 	    // Select objects with a given name.
 	    static void SelectByName(string name)
 	    {
-		    Selection.objects = GameObject.FindObjectsOfType<Transform>()
+		    Selection.objects = GameObject.FindObjectsByType<Transform>(FindObjectsSortMode.None)
 			    .Where(x => x.name.StartsWith(name))
 			    .Select(x => x.gameObject)
 			    .ToArray();

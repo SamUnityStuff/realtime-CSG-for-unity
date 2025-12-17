@@ -43,7 +43,7 @@ namespace RealtimeCSGExtensions
 
         enum Tabs { Construction, Surfaces }
         Tabs curTab = Tabs.Construction;
-        private static string[] tabStrings = new[] { "Construction", "Surface Paint" };
+        private static string[] tabStrings = new[] { "Construction", "Painting" };
 
         private Vector2 _mainScrollPos;
         static GUILayoutOption[] _expandHeight = new[] { GUILayout.ExpandHeight(true) };

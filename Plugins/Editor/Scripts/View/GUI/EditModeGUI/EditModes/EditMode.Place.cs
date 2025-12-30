@@ -1646,11 +1646,13 @@ namespace RealtimeCSG
 								SetPivotCenter(newPivot);
 							}
 							worldSpacePivotCenterSet = true;
-						}
+						} // If only transform set, should we set the pivot to its center?
 					} else
 					if (Tools.current == Tool.Move)
-					{
-						if (HaveSelection)
+                    {
+                        // TODO: investigate why this happens
+                        bool boundsCenterIsNaN = float.IsNaN(boundsCenter.x) || float.IsNaN(boundsCenter.y) || float.IsNaN(boundsCenter.z);
+						if (HaveSelection && !boundsCenterIsNaN)
 						{
 							Vector3 newPosition = boundsCenter;
 							RealtimeCSG.Helpers.CSGHandles.InitFunction init = delegate
@@ -2153,8 +2155,9 @@ namespace RealtimeCSG
 								}
 							}
 						}
-						catch
+						catch(Exception e)
 						{
+                            Debug.LogException(e);
 							throw;
 						}
 						break;
@@ -2437,7 +2440,9 @@ namespace RealtimeCSG
 									
 										MoveRotateObjects(topTransforms, center, rotation, worldDeltaMovement);
 									}
-								}
+								} catch(Exception e) {
+                                    Debug.LogException(e);    
+                                }
 								finally
 								{
 									ignoreSetTargets = false;
@@ -2672,7 +2677,12 @@ namespace RealtimeCSG
 					}
 				}
 			}	
-			finally
+			catch(System.Exception e)
+            {
+                Debug.Log($"Exception thrown, originalEventType {originalEventType}");
+                Debug.LogException(e);
+            }
+            finally
 			{
 				if (originalEventType == EventType.MouseUp ||
 					originalEventType == EventType.MouseMove) { mouseIsDragging = false; }

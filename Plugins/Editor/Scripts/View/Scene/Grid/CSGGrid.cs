@@ -318,14 +318,14 @@ namespace RealtimeCSG
                     // TODO:
                     // HACK: position offset doesn't work or render accurately rn
                     //gridOrientation.gridCenter = gridPivot.position;
-                    GlobalGridPivot.GetCurrentGridPositionAndRotation(out Vector3 gridPosition,
+                    GlobalGridAnchor.GetCurrentGridPositionAndRotation(out Vector3 gridPosition,
                         out Quaternion gridRotation);
                     
                     // Error Checking
                     {
-                        if (gridPosition.x != 0 || gridPosition.z != 0) { Debug.LogError($"Currently we only support moving the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridPivot)}."); }
+                        if (GlobalGridAnchor.mode != GlobalGridAnchor.GlobalGridMode.Anchored && (gridPosition.x != 0 || gridPosition.z != 0)) { Debug.LogError($"Currently we only support moving the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridAnchor)}."); }
                         Vector3 eulerTest = gridRotation.eulerAngles;
-                        if (eulerTest.x != 0 || eulerTest.z != 0) { Debug.LogError($"Currently we only support rotating the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridPivot)}."); }
+                        if (eulerTest.x != 0 || eulerTest.z != 0) { Debug.LogError($"Currently we only support rotating the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridAnchor)}."); }
                     }
                     gridOrientation.gridCenter = new Vector3(0, gridPosition.y, 0);
                     gridOrientation.gridRotation = gridRotation;

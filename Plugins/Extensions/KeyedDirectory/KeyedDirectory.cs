@@ -11,6 +11,7 @@ namespace RCSG.Plugins.Extensions.KeyedDirectory
         private static Dictionary<string, string> dict = new();
         public static string GetDirectory(string key)
         {
+            #if UNITY_EDITOR
             if (dict.TryGetValue(key, out string path))
             {
                 return path;
@@ -39,6 +40,9 @@ namespace RCSG.Plugins.Extensions.KeyedDirectory
             }
 
             Debug.LogError($"Could not find KeyedDirectory {key}");
+            #else
+            Debug.LogError($"Keyed Directory is editor-only! Looking for: {key}");
+            #endif
             return null;
         }
     }

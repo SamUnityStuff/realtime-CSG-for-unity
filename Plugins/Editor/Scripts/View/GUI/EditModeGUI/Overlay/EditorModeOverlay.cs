@@ -21,7 +21,6 @@ namespace RealtimeCSG
         //public const string iconPath = "Packages/com.prenominal.realtimecsg/Plugins/Editor/Resources/GUI/";
         public static string iconPath = KeyedDirectory.GetDirectory("RCSG_Icons");
         public const string _id = "RealtimeCSG";
-
         public EditorModeOverlay()
         : base(
 
@@ -33,8 +32,8 @@ namespace RealtimeCSG
             SurfaceEditorModeButton._id
         )
         {
+            this.collapsedIcon =AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath + "CSG_Icon.png");
         }
-
     }
 
     [EditorToolbarElement(_id, typeof(SceneView))]
@@ -43,7 +42,7 @@ namespace RealtimeCSG
         public const string _id = EditorModeOverlay._id + "/CSGActivateToggle";
         public CSGActivateToggleButton()
         {
-            tooltip = "Toggle CSG Realtime";
+            tooltip = "Toggle Realtime CSG";
             
             onIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(EditorModeOverlay.iconPath + "CSG_Icon.png");
             offIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(EditorModeOverlay.iconPath + "CSG_Icon_off.png");

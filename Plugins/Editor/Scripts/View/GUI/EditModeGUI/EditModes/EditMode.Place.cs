@@ -2030,7 +2030,7 @@ namespace RealtimeCSG
 												 * 6. divide by 3, this is your maximum distance to the line
 												*/
 												var mousePoint = Event.current.mousePosition;
-
+                                                
 												for (int t = 0; t < targetBoundEdgeIDs.Length; t++)
 												{
 													var side1 = backfaced[BoundsUtilities.AABBEdgeSides[t][0]];

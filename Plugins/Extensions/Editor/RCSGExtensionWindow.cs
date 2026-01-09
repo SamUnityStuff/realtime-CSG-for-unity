@@ -108,9 +108,9 @@ namespace RealtimeCSGExtensions
         {
             enum SurfaceTabs
             {
-                ReplaceMaterials, DirectionalPaint
+                AutoPaint /* Formerly Directional Paint */, ReplaceMaterials
             }
-            static string[] tabStrings = new[] { "Replace Materials", "Directional Paint" };
+            static string[] tabStrings = new[] { "Auto Paint", "Replace Materials" };
             TabReplaceMaterials _tabReplaceMaterials = new ();
             TabDirectionalPaint _tabDirectionalPaint = new ();
             
@@ -139,7 +139,7 @@ namespace RealtimeCSGExtensions
                     case SurfaceTabs.ReplaceMaterials:
                         _tabReplaceMaterials.OnGUI();
                         break;
-                    case SurfaceTabs.DirectionalPaint:
+                    case SurfaceTabs.AutoPaint:
                         _tabDirectionalPaint.OnGUI();
                         break;
                 }
@@ -211,7 +211,7 @@ namespace RealtimeCSGExtensions
                 {
                     if (_replacementOperations == null) { _replacementOperations = new(); }
                     {
-                        string replaceString = "Execute replacements on selected surfaces";
+                        string replaceString = _replacementOperations != null && _replacementOperations.Count > 1 ? "Execute all replacements on selected surfaces" : "Execute replacement on selected surfaces";
                         if (GUILayout.Button(replaceString))
                         {
                             ExecuteReplacementOperation(_replacementOperations, SceneView.currentDrawingSceneView);
@@ -274,7 +274,7 @@ namespace RealtimeCSGExtensions
                     bool _hasLateral = lateralMat != null;
 
                     Undo.IncrementCurrentGroup();
-                    using (new UndoGroup(surfaces, "Replace surface materials"))
+                    using (new UndoGroup(surfaces, "Auto-paint surface materials"))
                     {
                         Debug.Log("going for it" + surfaces.Length);
                         for (int i = 0; i < surfaces.Length; i++)
@@ -357,15 +357,6 @@ namespace RealtimeCSGExtensions
             {
             }
 
-            static bool ToggleButton(string labelActivate, string labelDeactivate, bool curVal, params GUILayoutOption[] options)
-            {
-                string label = curVal ? labelDeactivate : labelActivate;
-                if (GUILayout.Button(label, options))
-                {
-                    curVal = !curVal;
-                }
-                return curVal;
-            }
             public void OnGUI_AnchorTab()
             {
                 // Grid visibility toggles //
@@ -409,8 +400,8 @@ namespace RealtimeCSGExtensions
                     // Draw visibility Settings
                     EditorGUILayout.BeginVertical();
                     const float FIXED_WIDTH = 140;
-                    RealtimeCSG.CSGSettings.GridVisible = ToggleButton("☐ CSG Grid", "☑ CSG Grid", RealtimeCSG.CSGSettings.GridVisible, GUILayout.Width(FIXED_WIDTH));
-                    bool newUnityGridEnabled = ToggleButton("☐ Unity Grid", "☑ Unity Grid", lastUnityGridEnabled, GUILayout.Width(FIXED_WIDTH));
+                    RealtimeCSG.CSGSettings.GridVisible = EditorGUILayoutUtility.ToggleButton("☐ CSG Grid", "☑ CSG Grid", RealtimeCSG.CSGSettings.GridVisible, GUILayout.Width(FIXED_WIDTH));
+                    bool newUnityGridEnabled = EditorGUILayoutUtility.ToggleButton("☐ Unity Grid", "☑ Unity Grid", lastUnityGridEnabled, GUILayout.Width(FIXED_WIDTH));
                     EditorGUILayout.EndVertical();
                     
                     // Apply Unity visible
@@ -435,23 +426,53 @@ namespace RealtimeCSGExtensions
                 GUILayout.Space(16);
                 
                 // Mode select //
-                GlobalGridPivot.mode = (GlobalGridPivot.GlobalGridMode)EditorGUILayout.EnumPopup("Grid Mode:", GlobalGridPivot.mode);
+                //GlobalGridAnchor.mode = (GlobalGridAnchor.GlobalGridMode)EditorGUILayout.EnumPopup("Grid Mode:", GlobalGridAnchor.mode);
+                GUILayout.BeginHorizontal();
+                    GUILayout.Label("Grid Mode: ", GUILayout.ExpandWidth(false));
+                    GlobalGridAnchor.mode = (GlobalGridAnchor.GlobalGridMode)GUILayout.Toolbar((int)GlobalGridAnchor.mode, GlobalGridAnchor.GlobalGridModeStrings);
+                GUILayout.EndHorizontal();
                 GUILayout.Space(8);
                 
                 // Context-dependent editor //
-                switch (GlobalGridPivot.mode)
+                switch (GlobalGridAnchor.mode)
                 {
-                    case GlobalGridPivot.GlobalGridMode.Origin: break;
-                    case GlobalGridPivot.GlobalGridMode.Manual:
+                    case GlobalGridAnchor.GlobalGridMode.Origin: break;
+                    case GlobalGridAnchor.GlobalGridMode.NumberPunch:
                     {
+                        // TODO: add undos here
                         hackManualGridPos = EditorGUILayout.FloatField("Grid Height:", hackManualGridPos);
                         hackManualGridRot = EditorGUILayout.FloatField("Grid Rotation:", hackManualGridRot);
-                        GlobalGridPivot.HackOverrideManualPositionAndRotation(new Vector3(0, hackManualGridPos, 0), Quaternion.Euler(0, hackManualGridRot, 0));
+                        GlobalGridAnchor.HackOverrideNumberPunchPositionAndRotation(new Vector3(0, hackManualGridPos, 0), Quaternion.Euler(0, hackManualGridRot, 0));
                     } break;
-                    // case GlobalGridPivot.GlobalGridMode.Anchored:
-                    // {
-                    //     GUILayout.Label("Scene anchors are not supported yet!");
-                    // } break;
+                    case GlobalGridAnchor.GlobalGridMode.Anchored:
+                    {
+                        var gridPivot = GlobalGridAnchor.GetActiveGridPivot();
+                        if (gridPivot == null)
+                        {
+                            GUILayout.Label("There isn't an active grid anchor!");
+                            //GUILayout.Label((GlobalGridAnchor.editorGridAnchors.Count > 0) ? "All grid anchors are inactive!" : "There are no active grid anchors!");
+                        }
+                        else
+                        {
+                            GUILayout.Label("Current grid anchor: " + gridPivot.name);
+                            if (GUILayout.Button("View active anchor"))
+                            {
+                                //Selection.activeGameObject = gridPivot.gameObject;
+                                SceneView.lastActiveSceneView.Frame(new Bounds(gridPivot.transform.position, Vector3.one*7));
+                            }
+
+                            if (GUILayout.Button("Unset grid anchor"))
+                            {
+                                GlobalGridAnchor.SetActiveGridPivot(null);
+                            }
+                        }
+
+                        GUILayout.Space(4);
+                        if (GUILayout.Button("Create Grid Anchor"))
+                        {
+                            GlobalGridAnchor.CreateAnchor(null);
+                        }
+                    } break;
                 }
             }
 
@@ -469,37 +490,52 @@ namespace RealtimeCSGExtensions
             {
             }
         }
-        
-        
-        // TODO: move this somewhere?
-        // https://gamedev.stackexchange.com/questions/167946/unity-editor-horizontal-line-in-inspector
-        public static class EditorGUILayoutUtility
+
+
+        public static void FlagForRepaint()
         {
-            public static readonly Color DEFAULT_COLOR = new Color(0f, 0f, 0f, 0.3f);
-            public static readonly Vector2 DEFAULT_LINE_MARGIN = new Vector2(2f, 2f);
-
-            public const float DEFAULT_LINE_HEIGHT = 1f;
-
-            public static void HorizontalLine(Color color, float height, Vector2 margin)
+            // TODO: make more robust
+            GetWindow<RCSGExtensionWindow>()?.Repaint();
+        }
+    }
+    // TODO: move this somewhere?
+    // https://gamedev.stackexchange.com/questions/167946/unity-editor-horizontal-line-in-inspector
+    public static class EditorGUILayoutUtility
+    {
+        public static bool ToggleButton(string labelActivate, string labelDeactivate, bool curVal, params GUILayoutOption[] options)
+        {
+            string label = curVal ? labelDeactivate : labelActivate;
+            if (GUILayout.Button(label, options))
             {
-                GUILayout.Space(margin.x);
-
-                EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, height), color);
-
-                GUILayout.Space(margin.y);
+                curVal = !curVal;
             }
-            public static void HorizontalLine(Color color, float height) => EditorGUILayoutUtility.HorizontalLine(color, height, DEFAULT_LINE_MARGIN);
-            public static void HorizontalLine(Color color, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, margin);
-            public static void HorizontalLine(float height, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, margin);
+            return curVal;
+        }
+        
+        public static readonly Color DEFAULT_COLOR = new Color(0f, 0f, 0f, 0.3f);
+        public static readonly Vector2 DEFAULT_LINE_MARGIN = new Vector2(2f, 2f);
 
-            public static void HorizontalLine(Color color) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
-            public static void HorizontalLine(float height) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, DEFAULT_LINE_MARGIN);
-            public static void HorizontalLine(Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, margin);
+        public const float DEFAULT_LINE_HEIGHT = 1f;
 
-            public static void HorizontalLine() => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
+        public static void HorizontalLine(Color color, float height, Vector2 margin)
+        {
+            GUILayout.Space(margin.x);
+
+            EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, height), color);
+
+            GUILayout.Space(margin.y);
+        }
+        public static void HorizontalLine(Color color, float height) => EditorGUILayoutUtility.HorizontalLine(color, height, DEFAULT_LINE_MARGIN);
+        public static void HorizontalLine(Color color, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, margin);
+        public static void HorizontalLine(float height, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, margin);
+
+        public static void HorizontalLine(Color color) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
+        public static void HorizontalLine(float height) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, DEFAULT_LINE_MARGIN);
+        public static void HorizontalLine(Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, margin);
+
+        public static void HorizontalLine() => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
 
 #if UNITY_EDITOR
 #endif
-        }
     }
 }

@@ -21,7 +21,7 @@ namespace RealtimeCSGExtensions
         }
 
 #if UNITY_EDITOR
-        [MenuItem("GameObject/Level Design/Grid Anchor", false, 0)]
+        [MenuItem("GameObject/Realtime-CSG/Grid Anchor", false)]
         public static void CreateAnchor([CanBeNull] MenuCommand menuCommand)
         {
             GameObject go = new GameObject("New Grid Anchor");

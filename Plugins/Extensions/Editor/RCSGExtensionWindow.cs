@@ -461,7 +461,7 @@ namespace RealtimeCSGExtensions
                                 SceneView.lastActiveSceneView.Frame(new Bounds(gridPivot.transform.position, Vector3.one*7));
                             }
 
-                            if (GUILayout.Button("Unset grid anchor"))
+                            if (GUILayout.Button("Deactivate grid anchor"))
                             {
                                 GlobalGridAnchor.SetActiveGridPivot(null);
                             }

@@ -244,7 +244,7 @@ namespace RealtimeCSGExtensions.Editor
                                 {
                                     if (selectedAnchorIsActiveAnchor)
                                     {
-                                        if (GUILayout.Button("Return Grid To Origin"))
+                                        if (GUILayout.Button("Deactivate Grid Anchor"))
                                         {
                                             GlobalGridAnchor.SetActiveGridPivot(null);
                                             RCSGExtensionWindow.FlagForRepaint();

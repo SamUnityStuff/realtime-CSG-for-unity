@@ -295,45 +295,32 @@ namespace RealtimeCSG
 			gridOrientation.gridCamera				= camera;
 			gridOrientation.gridCameraPosition	= camera_position;
 
-			if (Tools.pivotRotation == PivotRotation.Local)
+            
+            Transform activeTransform = Selection.activeTransform;
+            Transform activeTransformParent = null;
+            if (activeTransform != null) { activeTransformParent = activeTransform.parent; }
+            if (Tools.pivotRotation == PivotRotation.Local && activeTransform != null && activeTransformParent != null)
 			{
-				var activeTransform = Selection.activeTransform;
-				if (activeTransform != null)
-				{
-					var parentCenter	= MathConstants.zeroVector3;
-					var parent			= activeTransform.parent;
-					if (parent != null)
-					{
-						parentCenter	= parent.position;
-					}
-
-					gridOrientation.gridRotation	= Tools.handleRotation;					
-					gridOrientation.gridCenter		= parentCenter;
-				}
+                // We're local, and selecting something, and that thing has a parent. Defer to the parent.
+				gridOrientation.gridRotation	= Tools.handleRotation;					
+				gridOrientation.gridCenter		= activeTransformParent.position;
 			}
             else
             {
-                //if (gridPivot != null)
+                // TODO:
+                // HACK: position offset on XZ doesn't work or render accurately rn
+                GlobalGridAnchor.GetCurrentGridPositionAndRotation(out Vector3 gridPosition,
+                    out Quaternion gridRotation);
+                    
+                // Error Checking
                 {
-                    // TODO:
-                    // HACK: position offset doesn't work or render accurately rn
-                    //gridOrientation.gridCenter = gridPivot.position;
-                    GlobalGridAnchor.GetCurrentGridPositionAndRotation(out Vector3 gridPosition,
-                        out Quaternion gridRotation);
-                    
-                    // Error Checking
-                    {
-                        if (GlobalGridAnchor.mode != GlobalGridAnchor.GlobalGridMode.Anchored && (gridPosition.x != 0 || gridPosition.z != 0)) { Debug.LogError($"Currently we only support moving the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridAnchor)}."); }
-                        Vector3 eulerTest = gridRotation.eulerAngles;
-                        if (eulerTest.x != 0 || eulerTest.z != 0) { Debug.LogError($"Currently we only support rotating the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridAnchor)}."); }
-                    }
-                    gridOrientation.gridCenter = new Vector3(0, gridPosition.y, 0);
-                    gridOrientation.gridRotation = gridRotation;
-                    // TODO: check gridWorkCenter
-                    
-                    //gridOrientation.gridCenter = new Vector3(0, gridPivot.position.y, 0);
-                    //gridOrientation.gridRotation = gridPivot.rotation;
+                    if (GlobalGridAnchor.mode != GlobalGridAnchor.GlobalGridMode.Anchored && (gridPosition.x != 0 || gridPosition.z != 0)) { Debug.LogError($"Currently we only support moving the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridAnchor)}."); }
+                    Vector3 eulerTest = gridRotation.eulerAngles;
+                    if (eulerTest.x != 0 || eulerTest.z != 0) { Debug.LogError($"Currently we only support rotating the grid on the Y axis! Fixme or zero out the X and Z in {nameof(GlobalGridAnchor)}."); }
                 }
+                gridOrientation.gridCenter = new Vector3(0, gridPosition.y, 0);
+                gridOrientation.gridRotation = gridRotation;
+                // TODO: check gridWorkCenter
             }
 			
 			gridOrientation.gridOrthoXVisible	= false;

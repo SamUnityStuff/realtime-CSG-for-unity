@@ -6,6 +6,7 @@ using InternalRealtimeCSG;
 using System.Collections.Generic;
 using RealtimeCSG.Legacy;
 using RealtimeCSG.Components;
+using Unity.VisualScripting;
 
 namespace RealtimeCSG
 {
@@ -48,6 +49,7 @@ namespace RealtimeCSG
 		#region Input
 		bool		cloneDragKeyPressed = false;
 		bool		mouseIsDragging		= false;
+		bool		rightMouseIsDragging = false; // SAM: added this
 		bool		firstMove			= false;
 		Camera      draggingOnCamera	= null;
 		#endregion 
@@ -1358,14 +1360,16 @@ namespace RealtimeCSG
 			var inCamera			= (camera != null) && camera.pixelRect.Contains(Event.current.mousePosition);
 
 			var originalEventType = Event.current.type;
-			if		(originalEventType == EventType.MouseMove) { mouseIsDragging	= false; draggingOnCamera = null; realMousePosition   = Event.current.mousePosition; }
-			else if (originalEventType == EventType.MouseDown) { mouseIsDragging	= false; draggingOnCamera = camera; realMousePosition = prevMousePos = Event.current.mousePosition; }
+			bool rightMouse = Event.current.button == 1; // SAM
+			if		(originalEventType == EventType.MouseMove) { mouseIsDragging	= false; rightMouseIsDragging = false; draggingOnCamera = null; realMousePosition   = Event.current.mousePosition; }
+			else if (originalEventType == EventType.MouseDown) { mouseIsDragging	= false; rightMouseIsDragging = false; draggingOnCamera = camera; realMousePosition = prevMousePos = Event.current.mousePosition; }
 			else if (originalEventType == EventType.MouseUp)   { draggingOnCamera	= null; }
 			else if (originalEventType == EventType.MouseDrag)
 			{
 				if (!mouseIsDragging && (prevMousePos - Event.current.mousePosition).magnitude > 4.0f)
 				{
 					mouseIsDragging = true;
+					if(rightMouse) { rightMouseIsDragging = true; }
 				}
 				realMousePosition += Event.current.delta;
 			}
@@ -1624,6 +1628,19 @@ namespace RealtimeCSG
 								RenderRotationCircle(camera);
 							}
 						}
+
+						// redundant if in scale mode
+						CSGSettings.BrushDimensionsAlwaysVisible = true;
+						if(CSGSettings.BrushDimensionsAlwaysVisible && (!mouseIsDragging || rightMouseIsDragging) && hoverOnBoundsEdge == -1)
+						{
+							bool showAxisX = true, showAxisY = true, showAxisZ = true;
+                            PaintUtility.RenderBoundsSizes(activeSpaceMatrices.activeWorldToLocal, activeSpaceMatrices.activeLocalToWorld,
+                                                                camera, targetLocalPoints,
+                                                                RealtimeCSG.CSGSettings.LockAxisX ? Color.red : Color.white,
+                                                                RealtimeCSG.CSGSettings.LockAxisY ? Color.red : Color.white,
+                                                                RealtimeCSG.CSGSettings.LockAxisZ ? Color.red : Color.white,
+                                                                showAxisX, showAxisY, showAxisZ);
+                        }
 					}
 				}
 

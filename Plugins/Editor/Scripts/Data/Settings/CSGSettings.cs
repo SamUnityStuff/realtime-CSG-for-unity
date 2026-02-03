@@ -220,6 +220,8 @@ namespace RealtimeCSG
         static public ClipMode              ClipMode                = ClipMode.RemovePositive;
         static public Material				DefaultMaterial			= MaterialUtility.WallMaterial;
 
+        static public bool BrushDimensionsAlwaysVisible = false; // SAM: added this feature
+
         const TexGenFlags                   defaultTextGenFlagsState = TexGenFlags.WorldSpaceTexture;
         static public TexGenFlags           DefaultTexGenFlags      = defaultTextGenFlagsState;
 
@@ -664,6 +666,9 @@ namespace RealtimeCSG
 
             ShowSceneInfo = EditorPrefs.GetBool("ShowSceneInfo", false);
 
+            // SAM:
+            BrushDimensionsAlwaysVisible = EditorPrefs.GetBool(nameof(BrushDimensionsAlwaysVisible), true);
+
 
             var sceneViews = SortedSceneViews();
             EnsureValidSceneviewNames(sceneViews);
@@ -752,6 +757,9 @@ namespace RealtimeCSG
             SetMaterial("DefaultMaterial", DefaultMaterial);
 
             EditorPrefs.SetBool("ShowSceneInfo", RealtimeCSG.CSGSettings.ShowSceneInfo);
+
+            // SAM:
+            EditorPrefs.SetBool(nameof(BrushDimensionsAlwaysVisible), BrushDimensionsAlwaysVisible);
 
 
             var builder = new System.Text.StringBuilder();

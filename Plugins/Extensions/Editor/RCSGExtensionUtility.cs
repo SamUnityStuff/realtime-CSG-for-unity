@@ -8,6 +8,8 @@ namespace RealtimeCSGExtensions
 {
     public static class RCSGExtensionUtility
     {
+        internal static UnityEngine.Color WithAlpha(this UnityEngine.Color c, float alpha) { return new UnityEngine.Color(c.r, c.g, c.b, alpha); }
+
         // TODO: Fill out reusable list instead?
         internal static SelectedBrushSurface[] GetSelectedSurfacesAlloc()
         {

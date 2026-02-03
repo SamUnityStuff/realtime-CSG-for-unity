@@ -1151,7 +1151,7 @@ namespace RealtimeCSG
                             
             var modelTransform		= brush.ChildData.ModelTransform;
             var modelToWorldSpace	= modelTransform.localToWorldMatrix;
-            
+
             Vector2 texcoordCoordinate;
             return InternalCSGModelManager.External.ConvertModelToTextureSpace(brush.brushNodeID, surfaceIndex, modelToWorldSpace, worldCoordinate, out texcoordCoordinate) ? 
                 texcoordCoordinate : MathConstants.zeroVector2;

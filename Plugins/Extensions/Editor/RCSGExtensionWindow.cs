@@ -108,11 +108,12 @@ namespace RealtimeCSGExtensions
         {
             enum SurfaceTabs
             {
-                AutoPaint /* Formerly Directional Paint */, ReplaceMaterials
+                DirectionalPaint /* Formerly Auto Paint */, ReplaceMaterials, AlignToWorld
             }
-            static string[] tabStrings = new[] { "Auto Paint", "Replace Materials" };
+            static string[] tabStrings = new[] { "Directional Paint", "Replace Materials", "Align To World" };
             TabReplaceMaterials _tabReplaceMaterials = new ();
             TabDirectionalPaint _tabDirectionalPaint = new ();
+            TabWorldUVs _tabAlignToWorld = new ();
             
             private SurfaceTabs curTab;
             Vector2 _mainScrollPos;
@@ -139,8 +140,11 @@ namespace RealtimeCSGExtensions
                     case SurfaceTabs.ReplaceMaterials:
                         _tabReplaceMaterials.OnGUI();
                         break;
-                    case SurfaceTabs.AutoPaint:
+                    case SurfaceTabs.DirectionalPaint:
                         _tabDirectionalPaint.OnGUI();
+                        break;
+                    case SurfaceTabs.AlignToWorld:
+                        _tabAlignToWorld.OnGUI();
                         break;
                 }
                 EditorGUILayout.EndScrollView();
@@ -253,6 +257,56 @@ namespace RealtimeCSGExtensions
                 }
             }
             
+            class TabWorldUVs
+            {
+                public void OnGUI()
+                {
+                    if(GUILayout.Button("Do it"))
+                    {
+                        MakeSurfacesWorldSpace();
+                    }
+                }
+                static void MakeSurfacesWorldSpace()
+                {
+                    HashSet<CSGBrush> brushesToUpdate = HashSetPool<CSGBrush>.Get();
+                    brushesToUpdate.Clear();
+
+                    SelectedBrushSurface[] selSurfaces = RealtimeCSGExtensions.RCSGExtensionUtility.GetSelectedSurfacesAlloc();
+                    for(int i = 0; i < selSurfaces.Length; i++)
+                    {
+                        int surfaceIdx = selSurfaces[i].surfaceIndex;
+                        CSGBrush brush = selSurfaces[i].brush;
+                        brushesToUpdate.Add(brush);
+                        Shape shape = brush.Shape;
+                        Matrix4x4 brushToWorld = brush.transform.localToWorldMatrix;
+                        Matrix4x4 worldToBrush = brushToWorld.inverse;
+                        
+                        // Pull surface orientation values
+                        Vector3 surfaceBinormal = shape.Surfaces[surfaceIdx].BiNormal;
+                        Vector3 surfaceNormal = shape.Surfaces[surfaceIdx].Plane.normal;
+                        Vector3 worldNormal = brushToWorld.MultiplyVector(surfaceNormal);
+                        
+                        // Find the angle between the surface's 'up' (binormal) vector, and the idealized up vector aligned with the surface planne.
+                        Quaternion worldIdealizedRotation = Quaternion.LookRotation(worldNormal, Vector3.up); // Get an idealized (world-up) rotation looking out of the surface normal
+                        Vector3 worldIdealizedUp = worldIdealizedRotation * Vector3.up; // Turn that into an 'up' vector
+                        Vector3 surfaceIdealizedUp = worldToBrush.MultiplyVector(worldIdealizedUp); // Transform that up vector back to brush-relative space
+
+                        float angle = -Vector3.SignedAngle(surfaceBinormal, surfaceIdealizedUp, surfaceNormal); // Calculate the angle between the surface 'up' and the idealized 'up'
+                        
+                        int texGenIndex = shape.Surfaces[surfaceIdx].TexGenIndex;
+                        TexGen copyTexGen = shape.TexGens[texGenIndex];
+                        copyTexGen.RotationAngle = angle;
+                        shape.TexGens[texGenIndex] = copyTexGen;
+                    }
+                    foreach(var brush in brushesToUpdate)
+                    {
+                        InternalCSGModelManager.CheckSurfaceModifications(brush);
+                    }
+                    HashSetPool<CSGBrush>.Release(brushesToUpdate);
+                }
+            }
+
+
             class TabDirectionalPaint
             {
                 private SurfaceUtilityEx.MaterialRef floor = new(), ceiling = new(), wall = new();
@@ -274,7 +328,7 @@ namespace RealtimeCSGExtensions
                     bool _hasLateral = lateralMat != null;
 
                     Undo.IncrementCurrentGroup();
-                    using (new UndoGroup(surfaces, "Auto-paint surface materials"))
+                    using (new UndoGroup(surfaces, "Directional paint surface materials"))
                     {
                         Debug.Log("going for it" + surfaces.Length);
                         for (int i = 0; i < surfaces.Length; i++)
@@ -321,7 +375,7 @@ namespace RealtimeCSGExtensions
                 
                 public void OnGUI()
                 {
-                    if (GUILayout.Button("Auto-paint selected surfaces"))
+                    if (GUILayout.Button("Paint selected surfaces"))
                     {
                         DirectionallyPaintSurfaces(floor, wall, ceiling);
                     }

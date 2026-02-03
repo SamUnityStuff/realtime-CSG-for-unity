@@ -644,7 +644,7 @@ namespace RealtimeCSG
 								backupData[t].brushCopy.gameObject.SetActive(needCopies);
 							}
 						}
-						if (clipSides[t] == ClipSide.CompletelyInside)
+						if (clipSides[t] == ClipSide.CompletelyInside && clipMode != ClipMode.Split) // FIX: Would destroy objects when they were just being split
 						{
 							backupData[t].removeOnCommit = true;
 							if (brush.gameObject.activeSelf)

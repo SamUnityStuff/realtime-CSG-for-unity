@@ -1510,8 +1510,12 @@ namespace RealtimeCSG
 				}
 				if (polygonSelectedCount != 1)
 					rotation = Tools.handleRotation;
+			}else {
+				Vector3 _gridPosEx = default; Quaternion _gridRotEx = Quaternion.identity;
+				RealtimeCSGExtensions.GlobalGridAnchor.GetCurrentGridPositionAndRotation(out _gridPosEx, out _gridRotEx);
+				rotation *= _gridRotEx;
 			}
-			if (rotation.x <= MathConstants.EqualityEpsilon &&
+            if (rotation.x <= MathConstants.EqualityEpsilon &&
 				rotation.y <= MathConstants.EqualityEpsilon &&
 				rotation.z <= MathConstants.EqualityEpsilon &&
 				rotation.w <= MathConstants.EqualityEpsilon)

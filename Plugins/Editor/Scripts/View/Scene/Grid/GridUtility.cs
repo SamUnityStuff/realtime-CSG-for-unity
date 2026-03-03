@@ -21,8 +21,9 @@ namespace RealtimeCSG
 		{
 			SpaceMatrices spaceMatrices = new SpaceMatrices();
 			if (transform == null || 
-				Tools.pivotRotation == PivotRotation.Global)
+				Tools.pivotRotation == PivotRotation.Global) {
 				return spaceMatrices;
+			}
 			
 			spaceMatrices.activeLocalToWorld = transform.localToWorldMatrix;
 			spaceMatrices.activeWorldToLocal = transform.worldToLocalMatrix;

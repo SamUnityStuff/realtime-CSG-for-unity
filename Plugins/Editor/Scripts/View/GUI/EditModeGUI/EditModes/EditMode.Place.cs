@@ -6,7 +6,6 @@ using InternalRealtimeCSG;
 using System.Collections.Generic;
 using RealtimeCSG.Legacy;
 using RealtimeCSG.Components;
-using Unity.VisualScripting;
 
 namespace RealtimeCSG
 {
@@ -300,6 +299,7 @@ namespace RealtimeCSG
 
 		void UpdateTargetBounds()
 		{
+			// TODO: Update to rotate with grid anchors?
 			activeTransform = Selection.activeTransform;
 			if (activeTransform == null)
 				return;
@@ -1203,6 +1203,7 @@ namespace RealtimeCSG
 			}
 		}
 		
+		// TODO(sam): Align with Grid anchors
 		void UpdateRotationCircle(SceneView sceneView, Matrix4x4 localToWorld, Vector2 mousePosition)
 		{
 			if (hoverOnBoundsEdge == -1)
@@ -1228,9 +1229,9 @@ namespace RealtimeCSG
 			if (Tools.pivotRotation == PivotRotation.Global)
 			{
 				rotateNormal = GeometryUtility.SnapToClosestAxis(rotateNormal);
-			}
-		
-			var rotatePlane		= new CSGPlane(rotateNormal, boundsCenter);
+            }
+
+            var rotatePlane		= new CSGPlane(rotateNormal, boundsCenter);
 			rotateCenter		= rotatePlane.Project(worldSpacePivotCenter);
 			var ray				= HandleUtility.GUIPointToWorldRay(mousePosition);
 			rotateMousePosition	= rotatePlane.RayIntersection(ray);
@@ -1358,6 +1359,9 @@ namespace RealtimeCSG
 		{
 			var camera				= sceneView.camera;
 			var inCamera			= (camera != null) && camera.pixelRect.Contains(Event.current.mousePosition);
+
+			Vector3 _gridPosEx = default; Quaternion _gridRotEx = Quaternion.identity;
+			if(Tools.pivotRotation == PivotRotation.Global) { RealtimeCSGExtensions.GlobalGridAnchor.GetCurrentGridPositionAndRotation(out _gridPosEx, out _gridRotEx); }
 
 			var originalEventType = Event.current.type;
 			bool rightMouse = Event.current.button == 1; // SAM
@@ -1654,7 +1658,7 @@ namespace RealtimeCSG
 							EditorGUI.BeginChangeCheck();
 							{
 								var rotation = Tools.handleRotation;
-								newPivot = PaintUtility.HandlePivot(camera, newPivot, rotation, 
+								newPivot = PaintUtility.HandlePivot(camera, newPivot, rotation * _gridRotEx, 
 									ColorSettings.BoundsEdgeHover, Tools.pivotMode == PivotMode.Pivot);
 							}
 							if (EditorGUI.EndChangeCheck())
@@ -1686,9 +1690,10 @@ namespace RealtimeCSG
 							};
 							EditorGUI.BeginChangeCheck();
 							{
+								Debug.Log("DOING POSITION HANDLE");
 								var activeSnappingMode = RealtimeCSG.CSGSettings.ActiveSnappingMode;
 								newPosition = RealtimeCSG.Helpers.CSGHandles.PositionHandle(camera, newPosition,
-									Tools.handleRotation, activeSnappingMode, snapVertices: snapVertices, initFunction: init, shutdownFunction: shutdown);
+									Tools.handleRotation * _gridRotEx, activeSnappingMode, snapVertices: snapVertices, initFunction: init, shutdownFunction: shutdown);
 							}
 							if (EditorGUI.EndChangeCheck())
 							{

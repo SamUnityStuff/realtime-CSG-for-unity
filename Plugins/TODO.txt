@@ -1,0 +1,2 @@
+﻿1. Allow triggering repaints of the Extension window from Scene view changes (e.g. changing grid mode) - add a subscribed watcher?
+2. EditModePlace.cs rotating bounds should align with anchor, right now those are standard world space.

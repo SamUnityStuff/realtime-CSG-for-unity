@@ -1690,7 +1690,7 @@ namespace RealtimeCSG
 							};
 							EditorGUI.BeginChangeCheck();
 							{
-								Debug.Log("DOING POSITION HANDLE");
+								//Debug.Log("DOING POSITION HANDLE");
 								var activeSnappingMode = RealtimeCSG.CSGSettings.ActiveSnappingMode;
 								newPosition = RealtimeCSG.Helpers.CSGHandles.PositionHandle(camera, newPosition,
 									Tools.handleRotation * _gridRotEx, activeSnappingMode, snapVertices: snapVertices, initFunction: init, shutdownFunction: shutdown);

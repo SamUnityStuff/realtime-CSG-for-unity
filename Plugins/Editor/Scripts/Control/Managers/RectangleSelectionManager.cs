@@ -21,8 +21,8 @@ namespace RealtimeCSG
 		static object		SelectionType_Normal;
 			
 		static FieldInfo	m_RectSelection_field;
-		static FieldInfo	m_RectSelecting_field;
-		static FieldInfo	s_RectSelectionID_field;
+        //static FieldInfo	m_RectSelecting_field;
+        static FieldInfo	s_RectSelectionID_field;
 		static FieldInfo	m_SelectStartPoint_field;
 		static FieldInfo	m_SelectMousePoint_field;
 		static FieldInfo	m_SelectionStart_field;
@@ -66,9 +66,9 @@ namespace RealtimeCSG
 
 			if (UnityRectSelectionType != null) 
 			{
-				m_RectSelecting_field		= UnityRectSelectionType.GetField("m_RectSelecting",	BindingFlags.NonPublic | BindingFlags.Instance);
-				s_RectSelectionID_field		= UnityRectSelectionType.GetField("s_RectSelectionID",	BindingFlags.NonPublic | BindingFlags.Static);
-				m_SelectStartPoint_field	= UnityRectSelectionType.GetField("m_SelectStartPoint",	BindingFlags.NonPublic | BindingFlags.Instance);
+                //m_RectSelecting_field	 	= UnityRectSelectionType.GetField("m_RectSelecting",	BindingFlags.NonPublic | BindingFlags.Instance);
+				s_RectSelectionID_field		= UnityRectSelectionType.GetField(Compatibility.s_RectSelectionID,	Compatibility.s_RectSelectionIDFlags);
+				m_SelectStartPoint_field	= UnityRectSelectionType.GetField(Compatibility.m_SelectStartPoint,	BindingFlags.NonPublic | BindingFlags.Instance); // CHECK?
 				m_SelectionStart_field		= UnityRectSelectionType.GetField("m_SelectionStart",	BindingFlags.NonPublic | BindingFlags.Instance);
 				m_LastSelection_field		= UnityRectSelectionType.GetField("m_LastSelection",	BindingFlags.NonPublic | BindingFlags.Instance);
 				m_CurrentSelection_field	= UnityRectSelectionType.GetField("m_CurrentSelection",	BindingFlags.NonPublic | BindingFlags.Instance);
@@ -94,7 +94,7 @@ namespace RealtimeCSG
 
 			reflectionSucceeded =	s_RectSelectionID_field  != null &&
 									m_RectSelection_field    != null &&
-									m_RectSelecting_field    != null &&
+									//m_RectSelecting_field    != null &&
 									m_SelectStartPoint_field != null &&
 									m_SelectMousePoint_field != null &&
 									UpdateSelection_method   != null;
@@ -104,8 +104,9 @@ namespace RealtimeCSG
 		static HashSet<GameObject>	rectFoundGameObjects = new HashSet<GameObject>();
 		static Vector2				prevStartGUIPoint;
 		static Vector2				prevMouseGUIPoint;
-		static Vector2				prevStartScreenPoint;
-		static Vector2				prevMouseScreenPoint;
+		static Vector2				prevMouseOffset = default;
+		//static Vector2				prevStartScreenPoint;
+		//static Vector2				prevMouseScreenPoint;
 		
 
 		static bool		rectClickDown       = false;
@@ -115,23 +116,31 @@ namespace RealtimeCSG
 
 		static List<UnityEngine.Object> sFoundObjects = new List<UnityEngine.Object>();
 
-		// Update rectangle selection using reflection
-		// This is hacky & dangerous 
-		// LOOK AWAY NOW!
-		internal static void Update(SceneView sceneView)
+
+        public static bool IsRectSelecting(int RectSelectionID) {
+            return RectSelectionID != 0 && (GUIUtility.hotControl == RectSelectionID || HandleUtility.nearestControl == RectSelectionID);
+        }
+
+        // Update rectangle selection using reflection
+        // This is hacky & dangerous 
+        // LOOK AWAY NOW!
+        internal static void Update(SceneView sceneView)
 		{
 			InitReflectedData();
 			if (!reflectionSucceeded)
 			{
 				prevStartGUIPoint = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
 				prevMouseGUIPoint = prevStartGUIPoint;
-				prevStartScreenPoint = MathConstants.zeroVector2;
-				prevMouseScreenPoint = MathConstants.zeroVector2;
+				//prevStartScreenPoint = MathConstants.zeroVector2;
+				//prevMouseScreenPoint = MathConstants.zeroVector2;
 				rectFoundGameObjects.Clear();
 				return;
 			}
 
-			var s_RectSelectionID_instance = (int)s_RectSelectionID_field.GetValue(null);
+			//var s_rectSelection = m_RectSelection_field.GetValue(sceneView);
+			object m_RectSelection_instance = m_RectSelection_field.GetValue(sceneView);
+            int s_RectSelectionID_instance = (int)s_RectSelectionID_field.GetValue(m_RectSelection_instance);
+			bool m_RectSelecting_instance = IsRectSelecting(s_RectSelectionID_instance);
 
 			// check if we're rect-selecting
 			if (GUIUtility.hotControl == s_RectSelectionID_instance)
@@ -141,40 +150,45 @@ namespace RealtimeCSG
 					Event.current.commandName == "ModifierKeysChanged")
 				{
 					// m_RectSelection field of SceneView
-					var m_RectSelection_instance = m_RectSelection_field.GetValue(sceneView);
 
 					// m_RectSelecting field of RectSelection instance
-					var m_RectSelecting_instance = (bool)m_RectSelecting_field.GetValue(m_RectSelection_instance);
+					//var m_RectSelecting_instance = (bool)m_RectSelecting_field.GetValue(m_RectSelection_instance);
 					if (m_RectSelecting_instance)
 					{
 						// m_SelectStartPoint of RectSelection instance
-						var m_SelectStartPoint_instance = (Vector2)m_SelectStartPoint_field.GetValue(m_RectSelection_instance);
+						Vector2 m_SelectStartPoint_instance = (Vector2)m_SelectStartPoint_field.GetValue(m_RectSelection_instance);
 
 						// m_SelectMousePoint of RectSelection instance
-						var m_SelectMousePoint_instance = (Vector2)m_SelectMousePoint_field.GetValue(m_RectSelection_instance);
+						Vector2 m_SelectMousePoint_instance = (Vector2)m_SelectMousePoint_field.GetValue(m_RectSelection_instance);
 
 						// determine if our frustum changed since the last time
 						bool modified = false;
 						bool needUpdate = false;
+						float sceneWindowHeight = sceneView.position.height;
+						// TODO: make this more correct
+						prevMouseOffset = EditorGUIUtility.singleLineHeight * Vector2.up;//.sceneView.titleContent;// Event.current.mousePosition;
 						if (prevStartGUIPoint != m_SelectStartPoint_instance)
 						{
-							prevStartGUIPoint = m_SelectStartPoint_instance;
-							prevStartScreenPoint = Event.current.mousePosition;
+							// IN UNITY 6+, for the layout event this often fires on, this ALWAYS returns (-1, -50)
+							// Also, we don't need it.
+							// prevStartScreenPoint = Event.current.mousePosition;
+							prevStartGUIPoint = m_SelectStartPoint_instance + prevMouseOffset;
 							needUpdate = true;
 						}
 						if (prevMouseGUIPoint != m_SelectMousePoint_instance)
 						{
-							prevMouseGUIPoint = m_SelectMousePoint_instance;
-							prevMouseScreenPoint = Event.current.mousePosition;
+							prevMouseGUIPoint = m_SelectMousePoint_instance + prevMouseOffset;
 							needUpdate = true;
 						}
-						if (needUpdate)
+
+                        if (needUpdate)
 						{
-							var rect	= CameraUtility.PointsToRect(prevStartScreenPoint, prevMouseScreenPoint);
+							var rect	= CameraUtility.PointsToRect(prevStartGUIPoint, prevMouseGUIPoint);
 							if (rect.width > 3 && rect.height > 3)
-							{ 
-								var frustum = CameraUtility.GetCameraSubFrustumGUI(sceneView.camera, rect);
+							{
+								Frustum frustum = CameraUtility.GetCameraSubFrustumGUI(sceneView.camera, rect);
 								
+								// TODO: I think the remaining jank is in here, the frustum looks relatively ok to me? At least the rays? Maybe the planes are weird.
 								// Find all the brushes (and it's gameObjects) that are in the frustum
 								if (SceneQueryUtility.GetItemsInFrustum(frustum.Planes, 
 																	  rectFoundGameObjects))
@@ -348,9 +362,9 @@ namespace RealtimeCSG
 						Event.current.button == 0)
 					{
 						// m_RectSelection field of SceneView
-						var m_RectSelection_instance = m_RectSelection_field.GetValue(sceneView);
+						//var m_RectSelection_instance = m_RectSelection_field.GetValue(sceneView);
 
-						var m_RectSelecting_instance = (bool)m_RectSelecting_field.GetValue(m_RectSelection_instance);
+						//var m_RectSelecting_instance = (bool)m_RectSelecting_field.GetValue(m_RectSelection_instance);
 						if (!m_RectSelecting_instance)
 						{
 							// make sure GeneratedMeshes are not part of our selection

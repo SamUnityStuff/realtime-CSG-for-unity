@@ -6,7 +6,6 @@ using UnityEngine;
 using InternalRealtimeCSG;
 using RealtimeCSG.Legacy;
 using RealtimeCSG.Components;
-using RealtimeCSG.Foundation;
 
 namespace RealtimeCSG
 {
@@ -532,6 +531,159 @@ namespace RealtimeCSG
 		}
 
 
+#if false
+		private void ExtrudeSurface(Camera camera, bool drag)
+		{
+			SelectedBrushSurface[] surfaces = RCSGExtensionUtility.GetSelectedSurfacesAlloc();
+			//for(int surfaceIdx = 0; surfaceIdx < surfaces.Length; surfaceIdx++) {
+			//	// Polygons and Surfaces are ordered the same!
+			//	var surface = surfaces[surfaceIdx];
+			//	var surfaceBrush = surface.brush;
+			//	var brushControlMesh = surfaceBrush.ControlMesh;
+			//	var pi = brushControlMesh.Polygons[surface.surfaceIndex];
+			//	
+			//	Vector3 center = Vector3.zero;
+			//	int centerAvg = 0;
+			//	using (Drawing.Draw.WithDuration(1f)) {
+			//		for (int e = 0; e < pi.EdgeIndices.Length; e++) {
+			//			int edgeIndex = pi.EdgeIndices[e];
+            //            int vertIndex1 = brushControlMesh.Edges[edgeIndex].VertexIndex;
+			//			int vertIndex2 = brushControlMesh.Edges[edgeIndex].TwinIndex;
+			//			Debug.Log("hi");
+			//			center += brushControlMesh.GetVertex(vertIndex1);
+			//			Drawing.Draw.SphereOutline(surfaceBrush.transform.TransformPoint(brushControlMesh.GetVertex(vertIndex1)), .3f, Color.red);
+			//			center += brushControlMesh.GetVertex(vertIndex2);
+			//			Drawing.Draw.SphereOutline(surfaceBrush.transform.TransformPoint(brushControlMesh.GetVertex(vertIndex2)), .3f, Color.blue);
+			//			centerAvg += 2;
+			//		}
+			//		center /= centerAvg;
+			//		
+			//		Drawing.Draw.SolidBox(surfaceBrush.transform.TransformPoint(center), Quaternion.identity, new(1), Color.red);
+			//	}
+			//	
+			//}
+			//{
+			//	string debugText = "";
+			//	for (int i = 0; i < _brushSelection.States.Length; i++) {
+			//		debugText += "STATES: " + _brushSelection.States[i].BrushTransform.name + "\n";
+			//	}
+            //    for (int i = 0; i < surfaces.Length; i++) {
+            //        debugText += "SURFS: " + surfaces[i].brush.name + "\n";
+            //    }
+			//	debugText += "hovered: " + _brushSelection.Brushes[_hoverOnTarget].name;
+			//	Debug.Log(debugText);
+			//}
+
+			EditModeGenerate.ShapeCancelled += ShapeCancelled;
+			EditModeGenerate.ShapeCommitted += ShapeCommitted;
+
+			ControlMeshState targetMeshState = _brushSelection.States[_hoverOnTarget];
+//			var brushLocalToWorld = targetMeshState.BrushTransform.localToWorldMatrix;
+
+			//var polygonPlane = targetMeshState.PolygonCenterPlanes[_hoverOnPolygonIndex];
+			//polygonPlane.Transform(brushLocalToWorld);
+
+			Vector3 localNormal = targetMeshState.PolygonCenterPlanes[_hoverOnPolygonIndex].normal;
+			Vector3 worldNormal = targetMeshState.BrushTransform.localToWorldMatrix.MultiplyVector(localNormal).normalized;
+
+			
+			List<int> selBrushes = ListPool<int>.Get();
+			List<int> selStates = ListPool<int>.Get();
+			List<int> selPolygon = ListPool<int>.Get();
+			{
+				//int targetBrushIndex = _hoverOnTarget;
+				//int polyIndex = _hoverOnPolygonIndex;
+				//selBrushes.Add(targetBrushIndex);
+				//selPolygon.Add(polyIndex);
+
+				// TODO: we can actually just make a list of brush pointers + poly indexes instead of doing this lookup into the control mesh just to dereference it
+				for(int s = 0; s < surfaces.Length; s++) {
+					CSGBrush surfaceBrush = surfaces[s].brush;
+					selBrushes.Add(IndexOf(_brushSelection.Brushes, surfaceBrush));
+					selStates.Add(IndexOfState(_brushSelection.States, surfaceBrush));
+					selPolygon.Add(surfaces[s].surfaceIndex);
+				}
+				static int IndexOf<T>(T[] arr, T val) {
+					for(int i = 0; i < arr.Length; i++) {
+						if (arr[i].Equals(val)) {
+							return i;
+						}
+					}
+					return -1;
+				}
+                static int IndexOfState(ControlMeshState[] arr, CSGBrush val) {
+                    Transform valTransform = val.transform;
+					for (int i = 0; i < arr.Length; i++) {
+                        if (arr[i].BrushTransform == valTransform) {
+                            return i;
+                        }
+                    }
+                    return -1;
+                }
+            }
+
+			if (Tools.pivotRotation == PivotRotation.Global)
+				worldNormal = GeometryUtility.SnapToClosestAxis(worldNormal);
+			{
+				for(int i = 0; i < selBrushes.Count; i++) {
+					int targetBrushIndex = selBrushes[i];
+					int polyIndex = selPolygon[i];
+					int stateIndex = selStates[i];
+					if(targetBrushIndex == -1 || stateIndex == -1 || polyIndex == -1) {
+						Debug.LogError("oops");
+						continue;
+					}
+					Debug.Log($"extrusion {i} of {selBrushes.Count} : {targetBrushIndex} {polyIndex} {stateIndex}");
+
+					ControlMeshState tmState = _brushSelection.States[stateIndex];
+
+					// ACTUAL LOGIC
+					CSGBrush brush = _brushSelection.Brushes[targetBrushIndex];
+					if (brush == null)
+						continue;
+
+
+					ControlMesh controlMesh = brush.ControlMesh;
+					Shape shape = brush.Shape;
+					if (controlMesh == null || shape == null)
+                        continue;
+
+					Vector3[] points			= tmState.WorldPoints;
+					int[] pointIndices	= tmState.PolygonPointIndices[polyIndex];
+
+					CSGPlane polygonPlane = GeometryUtility.CalcPolygonPlane(points, pointIndices);
+
+					Polygon polygon = controlMesh.Polygons[polyIndex];
+					if (polygon == null)
+                        continue;
+			
+					int[] edgeIndices = polygon.EdgeIndices;
+					if (edgeIndices == null ||
+						edgeIndices.Length == 0)
+                        continue;
+
+					uint[] smoothingGroups = new uint[edgeIndices.Length];
+					for (int e = 0; e < edgeIndices.Length; e++)
+					{
+						int edgeIndex			= edgeIndices[e];
+						int twinIndex			= controlMesh.Edges[edgeIndex].TwinIndex;
+						short twinPolygonIndex	= controlMesh.Edges[twinIndex].PolygonIndex;
+						int twinTexGenIndex		= controlMesh.Polygons[twinPolygonIndex].TexGenIndex;
+						uint twinSmoothingGroup	= shape.TexGens[twinTexGenIndex].SmoothingGroup;
+						smoothingGroups[e] = twinSmoothingGroup;
+					}
+
+					CSGOperationType forceDragSource = brush.OperationType;
+					EditModeManager.GenerateFromSurface(camera, brush, polygonPlane, worldNormal, points, pointIndices, smoothingGroups, drag, forceDragSource, CSGSettings.AutoCommitExtrusion);
+
+                    Debug.Log($"extrusion {i} complete");
+                }
+
+			}
+        }
+#endif
+        // Original implementation
+#if true
 		private void ExtrudeSurface(Camera camera, bool drag)
 		{
 			EditModeGenerate.ShapeCancelled += ShapeCancelled;
@@ -586,8 +738,8 @@ namespace RealtimeCSG
             var forceDragSource = brush.OperationType;
             EditModeManager.GenerateFromSurface(camera, brush, polygonPlane, worldNormal, points, pointIndices, smoothingGroups, drag, forceDragSource, CSGSettings.AutoCommitExtrusion);
 		}
-
-		private void MergeDuplicatePoints()
+#endif
+        private void MergeDuplicatePoints()
 		{
 			if (_editMode == EditMode.RotateEdge)
 				return;
@@ -777,7 +929,7 @@ namespace RealtimeCSG
 			}
 		}
 
-		#endregion
+#endregion
 
 
 

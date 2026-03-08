@@ -402,10 +402,11 @@ namespace RealtimeCSGExtensions
             // persist this state in-editor across reloads
             private float hackManualGridPos;
             private float hackManualGridRot;
-            struct SceneAnchor
-            {
-                //private GlobalGridPivot sourceObject;
-            }
+
+            //
+            Vector2 uiScrollGridAnchors;
+            RCSGGridAnchor[] uiCacheGridAnchors;
+            double uiLastUpdateGridAnchors;
 
             public void OnAwake_AnchorTab()
             {
@@ -500,32 +501,69 @@ namespace RealtimeCSGExtensions
                     } break;
                     case GlobalGridAnchor.GlobalGridMode.Anchored:
                     {
-                        var gridPivot = GlobalGridAnchor.GetActiveGridPivot();
-                        if (gridPivot == null)
-                        {
-                            GUILayout.Label("There isn't an active grid anchor!");
-                            //GUILayout.Label((GlobalGridAnchor.editorGridAnchors.Count > 0) ? "All grid anchors are inactive!" : "There are no active grid anchors!");
-                        }
-                        else
-                        {
-                            GUILayout.Label("Current grid anchor: " + gridPivot.name);
-                            if (GUILayout.Button("View active anchor"))
-                            {
-                                //Selection.activeGameObject = gridPivot.gameObject;
-                                SceneView.lastActiveSceneView.Frame(new Bounds(gridPivot.transform.position, Vector3.one*7));
-                            }
-
-                            if (GUILayout.Button("Deactivate grid anchor"))
-                            {
-                                GlobalGridAnchor.SetActiveGridPivot(null);
-                            }
-                        }
-
                         GUILayout.Space(4);
-                        if (GUILayout.Button("Create Grid Anchor"))
-                        {
+                        RCSGGridAnchor gridPivot = GlobalGridAnchor.GetActiveGridPivot();
+
+                        if (GUILayout.Button("Create Grid Anchor")) {
                             GlobalGridAnchor.CreateAnchor(null);
+                            uiLastUpdateGridAnchors = -1;
                         }
+                        // LOGIC: Update anchor list
+                        {
+                            // TODO: this is garbage:
+                            const double UPDATE_INTERVAL = .5;
+                            double curTime = EditorApplication.timeSinceStartup;
+                            if (uiCacheGridAnchors == null || curTime - uiLastUpdateGridAnchors > UPDATE_INTERVAL) {
+                                uiLastUpdateGridAnchors = curTime;
+                                uiCacheGridAnchors = GameObject.FindObjectsByType<RCSGGridAnchor>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID);
+                            }
+                        }
+
+                            // Header
+                            GUILayout.BeginHorizontal();
+                        {
+                            GUILayout.Label("Scene Anchors", EditorStyles.largeLabel, GUILayout.ExpandWidth(true));
+                            GUILayout.FlexibleSpace();
+                        }
+                        GUILayout.EndHorizontal();
+
+                        // Draw list of grid anchors
+                        EditorGUILayout.Separator();
+                        //GUILayout.FlexibleSpace();
+                        uiScrollGridAnchors = GUILayout.BeginScrollView(uiScrollGridAnchors, false, true);
+                        {
+                           
+
+                            for (int i = 0; i < uiCacheGridAnchors.Length; i++) {
+                                RCSGGridAnchor lGridAnchor = uiCacheGridAnchors[i];
+                                bool isActive = lGridAnchor == gridPivot;
+
+                                // TODO: Create background colors for list items
+                                GUILayout.BeginHorizontal();
+                                if (isActive) { // indent
+                                        GUI.enabled = false;
+                                    GUILayout.Label("[Active]", EditorStyles.label, GUILayout.ExpandWidth(false));
+                                        GUI.enabled = true;
+                                }
+                                GUILayout.Label(lGridAnchor.gameObject.name, isActive ? EditorStyles.boldLabel : EditorStyles.label);
+                                if(isActive) {
+                                    if(GUILayout.Button("Deactivate")) {
+                                        GlobalGridAnchor.SetActiveGridPivot(null);
+                                    }
+                                } else {
+                                    if (GUILayout.Button("Activate")) {
+                                        GlobalGridAnchor.SetActiveGridPivot(lGridAnchor);
+                                    }
+                                }
+
+                                if (GUILayout.Button("Find")) {
+                                    SceneView.lastActiveSceneView.Frame(new Bounds(lGridAnchor.transform.position, Vector3.one * 7), false);
+                                    Selection.activeTransform = lGridAnchor.transform;
+                                }
+                                GUILayout.EndHorizontal();
+                            }
+                        }
+                        GUILayout.EndScrollView();
                     } break;
                 }
             }

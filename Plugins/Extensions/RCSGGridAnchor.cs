@@ -106,7 +106,7 @@ namespace RealtimeCSGExtensions
 
         public static RCSGGridAnchor CurrentlySelectedGridAnchor;
 
-        public static RCSGGridAnchor GetActiveGridPivot()
+        public static RCSGGridAnchor GetActiveGridAnchor()
         {
             if (mode == GlobalGridMode.Origin) { return null; }
         

@@ -7,16 +7,6 @@ using UnityEngine.XR;
 
 namespace RealtimeCSGExtensions.Editor
 {
-    static class GUIStyles
-    {
-        private static GUIStyle labelAligned = new GUIStyle(GUI.skin.label);
-
-        public static GUIStyle AlignedLabel(TextAnchor alignment)
-        {
-            labelAligned.alignment = alignment;
-            return labelAligned;
-        }
-    }
     public static class SurfaceUtilityEx
     {
         public static Material GetMaterialAtIntersection(LegacyBrushIntersection intersection)
@@ -150,7 +140,7 @@ namespace RealtimeCSGExtensions.Editor
             Handles.zTest = UnityEngine.Rendering.CompareFunction.LessEqual;
             {
                 RCSGGridAnchor selectedAnchor = target?.GetComponent<RCSGGridAnchor>();
-                RCSGGridAnchor activeAnchor = GlobalGridAnchor.GetActiveGridPivot();
+                RCSGGridAnchor activeAnchor = GlobalGridAnchor.GetActiveGridAnchor();
                 bool hasSelectedAnchor = selectedAnchor != null;
                 bool selectedAnchorIsActiveAnchor = hasSelectedAnchor && (selectedAnchor == activeAnchor);
                 bool inAnchorMode = GlobalGridAnchor.mode == GlobalGridAnchor.GlobalGridMode.Anchored;

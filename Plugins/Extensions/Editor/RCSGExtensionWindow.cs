@@ -404,10 +404,9 @@ namespace RealtimeCSGExtensions
             private float hackManualGridRot;
 
             //
-            Vector2 uiScrollGridAnchors;
-            RCSGGridAnchor[] uiCacheGridAnchors;
-            double uiLastUpdateGridAnchors;
-
+            EditorGUILayoutUtility.ListState anchorsListState;
+            PollingComponentFinder<RCSGGridAnchor> sceneAnchorFinder;
+            EditorGUILayoutUtility.ListState modelsListState;
             public void OnAwake_AnchorTab()
             {
             }
@@ -416,18 +415,10 @@ namespace RealtimeCSGExtensions
             {
                 // Grid visibility toggles //
                 EditorGUILayout.BeginHorizontal();
-#if false
-                bool _lastVisible = RealtimeCSG.CSGSettings.GridVisible;
-                bool _newVisible = ToggleButton("☐ CSG Grid", "☑ CSG Grid", _lastVisible, GUILayout.Width(150));
-                if (_lastVisible != _newVisible)
                 {
-                    RealtimeCSG.CSGSettings.GridVisible = _newVisible;
-                    //UnityGridManager.ShowGrid = !_newVisible; // hide unity grid when we're using CSG grid
-                }
-#else
-                {
-                    GUILayout.Label("Show grids: ", GUILayout.ExpandWidth(false));
-                    
+                    //GUILayout.Label("Show grids: ", GUILayout.ExpandWidth(false));
+                    GUILayout.Label("Grid Visibility", EditorStyles.boldLabel, GUILayout.ExpandWidth(true));
+
                     bool csgGridEnabled = RealtimeCSG.CSGSettings.GridVisible;
                     bool lastUnityGridEnabled = false;
                     var views = UnityEditor.SceneView.sceneViews;
@@ -445,20 +436,13 @@ namespace RealtimeCSGExtensions
                             }
                         }
                     }
-
-                    //GridVisibility startVisibility = GridVisibility.None;
-                    //if (csgGridEnabled) { startVisibility |= GridVisibility.CSGGrid; }
-                    //if (lastShowingSceneViewGrid) { startVisibility |= GridVisibility.UnityGrid; }
-                    //startVisibility = (GridVisibility)EditorGUILayout.EnumFlagsField("Grid Visibility", startVisibility);
-
                     
                     // Draw visibility Settings
-                    EditorGUILayout.BeginVertical();
+                    //EditorGUILayout.BeginVertical();
                     const float FIXED_WIDTH = 140;
                     RealtimeCSG.CSGSettings.GridVisible = EditorGUILayoutUtility.ToggleButton("☐ CSG Grid", "☑ CSG Grid", RealtimeCSG.CSGSettings.GridVisible, GUILayout.Width(FIXED_WIDTH));
                     bool newUnityGridEnabled = EditorGUILayoutUtility.ToggleButton("☐ Unity Grid", "☑ Unity Grid", lastUnityGridEnabled, GUILayout.Width(FIXED_WIDTH));
-                    EditorGUILayout.EndVertical();
-                    
+                    //EditorGUILayout.EndVertical();
                     // Apply Unity visible
                     {
                         bool changedShowingSceneViewGrid = lastUnityGridEnabled != newUnityGridEnabled;
@@ -476,18 +460,22 @@ namespace RealtimeCSGExtensions
                         }
                     }
                 }
-#endif
                 EditorGUILayout.EndHorizontal();
+                EditorGUILayoutUtility.HorizontalLine();
                 GUILayout.Space(16);
-                
+
+                // ANCHOR STUFF //
                 // Mode select //
+#if false
                 //GlobalGridAnchor.mode = (GlobalGridAnchor.GlobalGridMode)EditorGUILayout.EnumPopup("Grid Mode:", GlobalGridAnchor.mode);
                 GUILayout.BeginHorizontal();
                     GUILayout.Label("Grid Mode: ", GUILayout.ExpandWidth(false));
                     GlobalGridAnchor.mode = (GlobalGridAnchor.GlobalGridMode)GUILayout.Toolbar((int)GlobalGridAnchor.mode, GlobalGridAnchor.GlobalGridModeStrings);
                 GUILayout.EndHorizontal();
                 GUILayout.Space(8);
-                
+#else
+                GlobalGridAnchor.mode = GlobalGridAnchor.GlobalGridMode.Anchored;//GUILayout.Toolbar((int)GlobalGridAnchor.mode, GlobalGridAnchor.GlobalGridModeStrings);
+#endif
                 // Context-dependent editor //
                 switch (GlobalGridAnchor.mode)
                 {
@@ -502,72 +490,170 @@ namespace RealtimeCSGExtensions
                     case GlobalGridAnchor.GlobalGridMode.Anchored:
                     {
                         GUILayout.Space(4);
-                        RCSGGridAnchor gridPivot = GlobalGridAnchor.GetActiveGridPivot();
-
-                        if (GUILayout.Button("Create Grid Anchor")) {
-                            GlobalGridAnchor.CreateAnchor(null);
-                            uiLastUpdateGridAnchors = -1;
-                        }
-                        // LOGIC: Update anchor list
-                        {
-                            // TODO: this is garbage:
-                            const double UPDATE_INTERVAL = .5;
-                            double curTime = EditorApplication.timeSinceStartup;
-                            if (uiCacheGridAnchors == null || curTime - uiLastUpdateGridAnchors > UPDATE_INTERVAL) {
-                                uiLastUpdateGridAnchors = curTime;
-                                uiCacheGridAnchors = GameObject.FindObjectsByType<RCSGGridAnchor>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID);
-                            }
-                        }
-
-                            // Header
-                            GUILayout.BeginHorizontal();
-                        {
-                            GUILayout.Label("Scene Anchors", EditorStyles.largeLabel, GUILayout.ExpandWidth(true));
-                            GUILayout.FlexibleSpace();
-                        }
-                        GUILayout.EndHorizontal();
-
-                        // Draw list of grid anchors
                         EditorGUILayout.Separator();
-                        //GUILayout.FlexibleSpace();
-                        uiScrollGridAnchors = GUILayout.BeginScrollView(uiScrollGridAnchors, false, true);
-                        {
-                           
 
-                            for (int i = 0; i < uiCacheGridAnchors.Length; i++) {
-                                RCSGGridAnchor lGridAnchor = uiCacheGridAnchors[i];
-                                bool isActive = lGridAnchor == gridPivot;
+                        // GRID ANCHOR LIST //
+                        DrawAnchorList();
 
-                                // TODO: Create background colors for list items
-                                GUILayout.BeginHorizontal();
-                                if (isActive) { // indent
-                                        GUI.enabled = false;
-                                    GUILayout.Label("[Active]", EditorStyles.label, GUILayout.ExpandWidth(false));
-                                        GUI.enabled = true;
-                                }
-                                GUILayout.Label(lGridAnchor.gameObject.name, isActive ? EditorStyles.boldLabel : EditorStyles.label);
-                                if(isActive) {
-                                    if(GUILayout.Button("Deactivate")) {
-                                        GlobalGridAnchor.SetActiveGridPivot(null);
-                                    }
-                                } else {
-                                    if (GUILayout.Button("Activate")) {
-                                        GlobalGridAnchor.SetActiveGridPivot(lGridAnchor);
-                                    }
-                                }
-
-                                if (GUILayout.Button("Find")) {
-                                    SceneView.lastActiveSceneView.Frame(new Bounds(lGridAnchor.transform.position, Vector3.one * 7), false);
-                                    Selection.activeTransform = lGridAnchor.transform;
-                                }
-                                GUILayout.EndHorizontal();
-                            }
-                        }
-                        GUILayout.EndScrollView();
+                        // MODEL LIST //
+                        DrawModelList();
+                            
                     } break;
                 }
             }
+            void DrawAnchorList() {
 
+                RCSGGridAnchor activeGridAnchor = GlobalGridAnchor.GetActiveGridAnchor();
+                string activeGridAnchorName = activeGridAnchor == null ? "None [Origin]" : activeGridAnchor.gameObject.name;
+                {
+                    GUILayout.BeginHorizontal();
+                    {
+                        GUILayout.Label("Grid Anchors", EditorStyles.boldLabel, GUILayout.ExpandWidth(true));
+                        GUILayout.FlexibleSpace();
+                        
+                        // CREATE BUTTON //
+                        GUI.enabled = activeGridAnchor != null;
+                        if (GUILayout.Button("RETURN TO ORIGIN", EditorStyles.toolbarButton)) {
+                            GlobalGridAnchor.SetActiveGridPivot(null);
+                        }
+                        GUI.enabled = true;
+
+                        if (GUILayout.Button("CREATE", EditorStyles.toolbarButton)) {
+                            GlobalGridAnchor.CreateAnchor(null);
+                            sceneAnchorFinder.ForceNextUpdate();
+                        }
+                    }
+
+                    GUILayout.EndHorizontal();
+                }
+
+                sceneAnchorFinder.Tick();
+                EditorGUILayoutUtility.BeginList(ref anchorsListState);
+                {
+                    Span<RCSGGridAnchor> sceneAnchors = sceneAnchorFinder.Get();
+                    Color _bgCol = GUI.backgroundColor;
+                    Color _bgColSelected = Color.Lerp(_bgCol, Color.lightGreen, .3f);
+
+                    //// Draw origin case
+                    //DrawAnchorListEntry(null, activeGridAnchor == null, _bgCol, _bgColSelected, true);
+                    
+                    // Draw normal anchors
+                    for (int i = 0; i < sceneAnchors.Length; i++) {
+                        RCSGGridAnchor lGridAnchor = sceneAnchors[i];
+                        bool isActive = lGridAnchor == activeGridAnchor;
+                        // if (isActive && DRAW_ACTIVE_FIRST) { continue; }
+
+                        DrawAnchorListEntry(lGridAnchor, isActive, _bgCol, _bgColSelected);
+                    }
+                    GUI.backgroundColor = _bgCol;
+                }
+                EditorGUILayoutUtility.EndList();
+            }
+
+            static void DrawAnchorListEntry(RCSGGridAnchor lGridAnchor, bool isActive, Color bgColorNormal, Color bgColorSelected) {
+                if (lGridAnchor == null) { return; }
+
+                GUI.backgroundColor = isActive ? bgColorSelected : bgColorNormal;
+                EditorGUILayoutUtility.BeginListElement();
+                // Highlight active
+                if (isActive) {
+                    GUI.enabled = false;
+                    GUILayout.Label("[Active]", EditorStyles.boldLabel, GUILayout.ExpandWidth(false));
+                    GUI.enabled = true;
+                }
+
+                GUILayout.Label(lGridAnchor.gameObject.name, isActive ? EditorStyles.boldLabel : EditorStyles.label);
+
+                // Buttons
+                // TODO: buttons should be consistently sized down the entire list in a better way than this
+                GUILayout.BeginHorizontal(GUILayout.Width(200));
+                { 
+                    //if (isActive) {
+                    //    if (GUILayout.Button("Deactivate")) {
+                    //        GlobalGridAnchor.SetActiveGridPivot(null);
+                    //    }
+                    //} else {
+                    //    
+                    //}
+                    {
+                        GUI.enabled = (!isActive);
+                        if (GUILayout.Button("Activate")) {
+                            GlobalGridAnchor.SetActiveGridPivot(lGridAnchor);
+                        }
+                        GUI.enabled = true;
+                    }
+
+                    if (GUILayout.Button("Find")) {
+                        SceneView.lastActiveSceneView.Frame(new Bounds(lGridAnchor.transform.position, Vector3.one * 7), false);
+                        Selection.activeTransform = lGridAnchor.transform;
+                    }
+                   
+                    
+                }
+                GUILayout.EndHorizontal();
+
+                EditorGUILayoutUtility.EndListElement();
+            }
+
+            void DrawModelList() {
+                // GRID ANCHOR LIST //
+                EditorGUILayoutUtility.BeginListWithHeader(ref modelsListState, "Scene Models");
+                {
+                    Span<CSGModel> sceneModels = CSGModelManager.GetAllModels().AsSpan();
+                    CSGModel activeModel = SelectionUtility.LastUsedModel;
+
+                    Color _bgCol = GUI.backgroundColor;
+                    Color _bgColSelected = Color.Lerp(_bgCol, Color.lightGreen, .3f);
+                    for (int i = 0; i < sceneModels.Length; i++) {
+                        CSGModel eModel = sceneModels[i];
+                        bool isActive = eModel == activeModel;
+
+                        GUI.backgroundColor = isActive ? _bgColSelected : _bgCol;
+                        DrawModelListEntry(eModel, isActive);
+                    }
+                    GUI.backgroundColor = _bgCol;
+                }
+                EditorGUILayoutUtility.EndList();
+            }
+            static void DrawModelListEntry(CSGModel eModel, bool isActive) {
+                if (eModel == null) { return; }
+                string eModelName = eModel.gameObject.name;
+                if(eModelName.StartsWith("[default-CSGModel]")) { return; }
+                EditorGUILayoutUtility.BeginListElement();
+                
+                // Highlight active
+                if (isActive) {
+                    GUI.enabled = false;
+                    // TODO: make renamable
+                    GUILayout.Label("[Active]", EditorStyles.boldLabel, GUILayout.ExpandWidth(false));
+                    GUI.enabled = true;
+                }
+
+                GUILayout.Label(eModelName, isActive ? EditorStyles.boldLabel : EditorStyles.label);
+
+                // TODO: buttons should be consistently sized down the entire list, this is a rough way of doing it
+                GUILayout.BeginHorizontal(GUILayout.Width(200));
+                {
+                    // Buttons
+                    if (isActive) {
+                        if (GUILayout.Button("Deselect")) {
+                        }
+                    } else {
+                        if (GUILayout.Button("Select")) {
+                            Selection.activeGameObject = eModel.gameObject;
+                            SelectionUtility.LastUsedModel = eModel;
+                        }
+                    }
+                    if (GUILayout.Button("Find")) {
+                        const float SIZE = 30;
+                        SceneView.lastActiveSceneView.Frame(new Bounds(eModel.transform.position, new(SIZE, SIZE, SIZE)), false);
+                        Selection.activeTransform = eModel.transform;
+                    }
+                }
+                GUILayout.EndHorizontal();
+                
+                EditorGUILayoutUtility.EndListElement();
+            }
             public void OverlayOnSceneGUI()
             {
                 
@@ -590,44 +676,88 @@ namespace RealtimeCSGExtensions
             GetWindow<RCSGExtensionWindow>()?.Repaint();
         }
     }
-    // TODO: move this somewhere?
-    // https://gamedev.stackexchange.com/questions/167946/unity-editor-horizontal-line-in-inspector
-    public static class EditorGUILayoutUtility
-    {
-        public static bool ToggleButton(string labelActivate, string labelDeactivate, bool curVal, params GUILayoutOption[] options)
+    
+    namespace Editor {
+        struct PollingComponentFinder<T> where T : UnityEngine.Object
         {
-            string label = curVal ? labelDeactivate : labelActivate;
-            if (GUILayout.Button(label, options))
-            {
-                curVal = !curVal;
+            T[] cache;
+            double lastUpdateTime;
+            public void ForceNextUpdate() {
+                lastUpdateTime = -1;
             }
-            return curVal;
+            // TODO: this is garbage:
+            public bool Tick() {
+                const double UPDATE_INTERVAL = .5;
+                double curTime = EditorApplication.timeSinceStartup;
+                if (cache == null || curTime - lastUpdateTime > UPDATE_INTERVAL) {
+                    lastUpdateTime = curTime;
+                    cache = GameObject.FindObjectsByType<T>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID);
+                    return true;
+                }
+                return false;
+            }
+
+            public Span<T> Get() {
+                if(cache == null) { return default; }
+                return cache.AsSpan();
+            }
+
         }
-        
-        public static readonly Color DEFAULT_COLOR = new Color(0f, 0f, 0f, 0.3f);
-        public static readonly Vector2 DEFAULT_LINE_MARGIN = new Vector2(2f, 2f);
 
-        public const float DEFAULT_LINE_HEIGHT = 1f;
 
-        public static void HorizontalLine(Color color, float height, Vector2 margin)
+        // TODO: move this somewhere?
+        // https://gamedev.stackexchange.com/questions/167946/unity-editor-horizontal-line-in-inspector
+        public static partial class EditorGUILayoutUtility
         {
-            GUILayout.Space(margin.x);
+            // such a stupid hack
+            public static void BeginVisible(bool makeVisible) {
+                Rect clipRect = makeVisible ? new(0, 0, float.MaxValue, float.MaxValue) : new(0, 0, 0, 0);
+                GUI.BeginClip(clipRect);
+            }
+            public static void EndVisible() {
+                GUI.EndClip();
+            }
 
-            EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, height), color);
+            public static bool ToggleButton(string labelActivate, string labelDeactivate, bool curVal, params GUILayoutOption[] options) {
+                return ToggleButton(labelActivate, labelDeactivate, curVal, null, options);
+            }
+            public static bool ToggleButton(string labelActivate, string labelDeactivate, bool curVal, GUIStyle style = null, params GUILayoutOption[] options)
+            {
+                if(style == null) { style = GUI.skin.button; }
+                string label = curVal ? labelDeactivate : labelActivate;
+                if (GUILayout.Button(label, style, options))
+                {
+                    curVal = !curVal;
+                }
+                return curVal;
+            }
+        
+            public static readonly Color DEFAULT_COLOR = new Color(0f, 0f, 0f, 0.3f);
+            public static readonly Vector2 DEFAULT_LINE_MARGIN = new Vector2(2f, 2f);
 
-            GUILayout.Space(margin.y);
-        }
-        public static void HorizontalLine(Color color, float height) => EditorGUILayoutUtility.HorizontalLine(color, height, DEFAULT_LINE_MARGIN);
-        public static void HorizontalLine(Color color, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, margin);
-        public static void HorizontalLine(float height, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, margin);
+            public const float DEFAULT_LINE_HEIGHT = 1f;
 
-        public static void HorizontalLine(Color color) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
-        public static void HorizontalLine(float height) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, DEFAULT_LINE_MARGIN);
-        public static void HorizontalLine(Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, margin);
+            public static void HorizontalLine(Color color, float height, Vector2 margin)
+            {
+                GUILayout.Space(margin.x);
 
-        public static void HorizontalLine() => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
+                EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, height), color);
+
+                GUILayout.Space(margin.y);
+            }
+            public static void HorizontalLine(Color color, float height) => EditorGUILayoutUtility.HorizontalLine(color, height, DEFAULT_LINE_MARGIN);
+            public static void HorizontalLine(Color color, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, margin);
+            public static void HorizontalLine(float height, Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, margin);
+
+            public static void HorizontalLine(Color color) => EditorGUILayoutUtility.HorizontalLine(color, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
+            public static void HorizontalLine(float height) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, height, DEFAULT_LINE_MARGIN);
+            public static void HorizontalLine(Vector2 margin) => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, margin);
+
+            public static void HorizontalLine() => EditorGUILayoutUtility.HorizontalLine(DEFAULT_COLOR, DEFAULT_LINE_HEIGHT, DEFAULT_LINE_MARGIN);
 
 #if UNITY_EDITOR
 #endif
+        }
     }
+
 }

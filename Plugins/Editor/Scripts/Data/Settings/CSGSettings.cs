@@ -220,7 +220,8 @@ namespace RealtimeCSG
         static public ClipMode              ClipMode                = ClipMode.RemovePositive;
         static public Material				DefaultMaterial			= MaterialUtility.WallMaterial;
 
-        static public bool BrushDimensionsAlwaysVisible = false; // SAM: added this feature
+        static public bool BrushDimensionsAlwaysVisible = true; // SAM: added this feature
+        static public bool CanDragSelectMultipleModels = false; // SAM: added this feature
 
         const TexGenFlags                   defaultTextGenFlagsState = TexGenFlags.WorldSpaceTexture;
         static public TexGenFlags           DefaultTexGenFlags      = defaultTextGenFlagsState;
@@ -668,6 +669,7 @@ namespace RealtimeCSG
 
             // SAM:
             BrushDimensionsAlwaysVisible = EditorPrefs.GetBool(nameof(BrushDimensionsAlwaysVisible), true);
+            CanDragSelectMultipleModels = EditorPrefs.GetBool(nameof(CanDragSelectMultipleModels), true);
 
 
             var sceneViews = SortedSceneViews();
@@ -760,6 +762,7 @@ namespace RealtimeCSG
 
             // SAM:
             EditorPrefs.SetBool(nameof(BrushDimensionsAlwaysVisible), BrushDimensionsAlwaysVisible);
+            EditorPrefs.SetBool(nameof(CanDragSelectMultipleModels), CanDragSelectMultipleModels);
 
 
             var builder = new System.Text.StringBuilder();

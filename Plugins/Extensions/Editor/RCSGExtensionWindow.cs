@@ -438,11 +438,16 @@ namespace RealtimeCSGExtensions
                     }
                     
                     // Draw visibility Settings
-                    //EditorGUILayout.BeginVertical();
+                    EditorGUILayout.BeginVertical();
+                    {
+
+                    }
                     const float FIXED_WIDTH = 140;
-                    RealtimeCSG.CSGSettings.GridVisible = EditorGUILayoutUtility.ToggleButton("☐ CSG Grid", "☑ CSG Grid", RealtimeCSG.CSGSettings.GridVisible, GUILayout.Width(FIXED_WIDTH));
-                    bool newUnityGridEnabled = EditorGUILayoutUtility.ToggleButton("☐ Unity Grid", "☑ Unity Grid", lastUnityGridEnabled, GUILayout.Width(FIXED_WIDTH));
-                    //EditorGUILayout.EndVertical();
+                    // RealtimeCSG.CSGSettings.GridVisible = EditorGUILayoutUtility.ToggleButton("☐ CSG Grid", "☑ CSG Grid", RealtimeCSG.CSGSettings.GridVisible, GUILayout.Width(FIXED_WIDTH));
+                    // bool newUnityGridEnabled = EditorGUILayoutUtility.ToggleButton("☐ Unity Grid", "☑ Unity Grid", lastUnityGridEnabled, GUILayout.Width(FIXED_WIDTH));
+                    RealtimeCSG.CSGSettings.GridVisible = GUILayout.Toggle(RealtimeCSG.CSGSettings.GridVisible, "CSG Grid", GUILayout.Width(FIXED_WIDTH));
+                    bool newUnityGridEnabled = GUILayout.Toggle(lastUnityGridEnabled, "Unity Grid", GUILayout.Width(FIXED_WIDTH));
+                    EditorGUILayout.EndVertical();
                     // Apply Unity visible
                     {
                         bool changedShowingSceneViewGrid = lastUnityGridEnabled != newUnityGridEnabled;
@@ -461,6 +466,17 @@ namespace RealtimeCSGExtensions
                     }
                 }
                 EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Separator();
+                {
+                    GUILayout.BeginHorizontal();
+                    const float FIXED_WIDTH = 200;
+                    GUILayout.Label("Additional Settings", EditorStyles.boldLabel);
+                    GUILayout.BeginVertical();
+                    CSGSettings.CanDragSelectMultipleModels = GUILayout.Toggle(CSGSettings.CanDragSelectMultipleModels, "Can drag-select multiple models");
+                    GUILayout.EndVertical();
+                    GUILayout.EndHorizontal();
+                }
                 EditorGUILayoutUtility.HorizontalLine();
                 GUILayout.Space(16);
 
@@ -572,12 +588,10 @@ namespace RealtimeCSGExtensions
                     //    if (GUILayout.Button("Deactivate")) {
                     //        GlobalGridAnchor.SetActiveGridPivot(null);
                     //    }
-                    //} else {
-                    //    
                     //}
                     {
                         GUI.enabled = (!isActive);
-                        if (GUILayout.Button("Activate")) {
+                        if (GUILayout.Button((!isActive) ? "Activate" : "Activated")) {
                             GlobalGridAnchor.SetActiveGridPivot(lGridAnchor);
                         }
                         GUI.enabled = true;
@@ -635,15 +649,13 @@ namespace RealtimeCSGExtensions
                 GUILayout.BeginHorizontal(GUILayout.Width(200));
                 {
                     // Buttons
-                    if (isActive) {
-                        if (GUILayout.Button("Deselect")) {
-                        }
-                    } else {
-                        if (GUILayout.Button("Select")) {
-                            Selection.activeGameObject = eModel.gameObject;
-                            SelectionUtility.LastUsedModel = eModel;
-                        }
+                    GUI.enabled = !isActive;
+                    if (GUILayout.Button(!isActive ? "Select" : "Selected")) {
+                        Selection.activeGameObject = eModel.gameObject;
+                        SelectionUtility.LastUsedModel = eModel;
                     }
+                    GUI.enabled = true;
+                    
                     if (GUILayout.Button("Find")) {
                         const float SIZE = 30;
                         SceneView.lastActiveSceneView.Frame(new Bounds(eModel.transform.position, new(SIZE, SIZE, SIZE)), false);

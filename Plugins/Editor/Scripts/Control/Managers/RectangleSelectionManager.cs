@@ -1,12 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Linq;
-using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEditor;
 using InternalRealtimeCSG;
 using RealtimeCSG.Components;
+using System;
+using System.Buffers;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace RealtimeCSG
 {
@@ -194,6 +195,11 @@ namespace RealtimeCSG
 																	  rectFoundGameObjects))
 								{ 
 									modified = true;
+
+                                    bool PREVENT_MULTI_MODEL_SELECTION = CSGSettings.CanDragSelectMultipleModels;
+									if (PREVENT_MULTI_MODEL_SELECTION) {
+										RemoveSelectionsNotFromModel(rectFoundGameObjects, SelectionUtility.LastUsedModel);
+									}
 								} else
 								{
 									if (rectFoundGameObjects != null &&
@@ -449,5 +455,39 @@ namespace RealtimeCSG
 				}
 			}			
 		}
+	
+		internal static void RemoveSelectionsNotFromModel(HashSet<GameObject> foundGameObjects, CSGModel mainModel) {
+            Transform currentModelTransform = mainModel.transform;
+            CSGModel[] allModels = CSGModelManager.GetAllModels();
+            int modelCount = allModels.Length;
+            Transform[] allModelTransformBuffer = ArrayPool<Transform>.Shared.Rent(modelCount);
+            for (int m = 0; m < allModels.Length; m++) {
+                allModelTransformBuffer[m] = allModels[m].transform;
+            }
+
+            int foundCount = foundGameObjects.Count;
+            GameObject[] foundGOsArray = ArrayPool<GameObject>.Shared.Rent(foundCount);
+            foundGameObjects.CopyTo(foundGOsArray);
+            for (int f = 0; f < foundCount; f++) {
+                GameObject found = foundGOsArray[f];
+                CSGNode foundNode = found.GetComponent<CSGNode>();
+                if (foundNode == null) { continue; }
+
+
+                Transform parent = foundNode.transform.parent;
+                while (parent != null) { // walk up the chain...
+                    for (int m = 0; m < modelCount; m++) {
+                        if (parent == allModelTransformBuffer[m]) { // this is a model!
+                            if (parent != currentModelTransform) { Debug.Log($"REMOVING {found}"); foundGameObjects.Remove(found); } // but not the currently selected model!
+                            break;
+                        }
+                    }
+                    parent = parent.parent;
+                }
+            }
+
+            ArrayPool<Transform>.Shared.Return(allModelTransformBuffer);
+            ArrayPool<GameObject>.Shared.Return(foundGOsArray);
+        }
 	}
 }

@@ -1634,7 +1634,6 @@ namespace RealtimeCSG
 						}
 
 						// redundant if in scale mode
-						CSGSettings.BrushDimensionsAlwaysVisible = true;
 						if(CSGSettings.BrushDimensionsAlwaysVisible && (!mouseIsDragging || rightMouseIsDragging) && hoverOnBoundsEdge == -1)
 						{
 							bool showAxisX = true, showAxisY = true, showAxisZ = true;

@@ -196,7 +196,7 @@ namespace RealtimeCSG
 								{ 
 									modified = true;
 
-                                    bool PREVENT_MULTI_MODEL_SELECTION = CSGSettings.CanDragSelectMultipleModels;
+                                    bool PREVENT_MULTI_MODEL_SELECTION = !CSGSettings.CanDragSelectMultipleModels;
 									if (PREVENT_MULTI_MODEL_SELECTION) {
 										RemoveSelectionsNotFromModel(rectFoundGameObjects, SelectionUtility.LastUsedModel);
 									}

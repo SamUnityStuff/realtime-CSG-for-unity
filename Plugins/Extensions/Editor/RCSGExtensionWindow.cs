@@ -407,6 +407,7 @@ namespace RealtimeCSGExtensions
             EditorGUILayoutUtility.ListState anchorsListState;
             PollingComponentFinder<RCSGGridAnchor> sceneAnchorFinder;
             EditorGUILayoutUtility.ListState modelsListState;
+            bool foldoutAdditionalSettings = false;
             public void OnAwake_AnchorTab()
             {
             }
@@ -469,13 +470,23 @@ namespace RealtimeCSGExtensions
                 
                 EditorGUILayout.Separator();
                 {
-                    GUILayout.BeginHorizontal();
-                    const float FIXED_WIDTH = 200;
-                    GUILayout.Label("Additional Settings", EditorStyles.boldLabel);
-                    GUILayout.BeginVertical();
-                    CSGSettings.CanDragSelectMultipleModels = GUILayout.Toggle(CSGSettings.CanDragSelectMultipleModels, "Can drag-select multiple models");
-                    GUILayout.EndVertical();
-                    GUILayout.EndHorizontal();
+                    foldoutAdditionalSettings = EditorGUILayout.Foldout(foldoutAdditionalSettings, "Additional Settings");
+                    if(foldoutAdditionalSettings) {
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Space(20);
+                        GUILayout.BeginVertical();
+                        CSGSettings.CanDragSelectMultipleModels = GUILayout.Toggle(CSGSettings.CanDragSelectMultipleModels, "Can drag-select multiple models");
+                        CSGSettings.BrushDimensionsAlwaysVisible = GUILayout.Toggle(CSGSettings.BrushDimensionsAlwaysVisible, "Always show brush dimensions");
+                        GUILayout.EndVertical();
+                        GUILayout.EndHorizontal();
+                    }
+                    //GUILayout.BeginHorizontal();
+                    //const float FIXED_WIDTH = 200;
+                    //GUILayout.Label("Additional Settings", EditorStyles.boldLabel);
+                    //GUILayout.BeginVertical();
+                    //CSGSettings.CanDragSelectMultipleModels = GUILayout.Toggle(CSGSettings.CanDragSelectMultipleModels, "Can drag-select multiple models");
+                    //GUILayout.EndVertical();
+                    //GUILayout.EndHorizontal();
                 }
                 EditorGUILayoutUtility.HorizontalLine();
                 GUILayout.Space(16);

@@ -336,8 +336,12 @@ namespace RealtimeCSGExtensions
                             SelectedBrushSurface surface = surfaces[i];
                             var brush			= surface.brush;
                             var surfaceIndex	= surface.surfaceIndex;
-                            
+
                             Vector3 normal = brush.Shape.Surfaces[surfaceIndex].Plane.normal.normalized;
+                            if (brush.OperationType == RealtimeCSG.Foundation.CSGOperationType.Subtractive) {
+                                // TODO: is this still correct for intersections?
+                                normal *= -1;
+                            }
                             Vector3 transformNormal = brush.transform.TransformDirection(normal);
                             // SELECT
                             bool hasMat = _hasLateral;

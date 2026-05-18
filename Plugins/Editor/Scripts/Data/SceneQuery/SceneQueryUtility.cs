@@ -170,6 +170,10 @@ namespace InternalRealtimeCSG
             }
 #endif
 
+            if(SceneVisibilityManager.instance.IsPickingDisabled(go)) {
+				return null;
+			}
+
             GameObject group = null;
             Transform groupTransform = null;
             var node = go.GetComponentInChildren<CSGNode>();

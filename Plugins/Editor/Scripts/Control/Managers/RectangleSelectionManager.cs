@@ -197,9 +197,7 @@ namespace RealtimeCSG
 									modified = true;
 
                                     bool PREVENT_MULTI_MODEL_SELECTION = !CSGSettings.CanDragSelectMultipleModels;
-									if (PREVENT_MULTI_MODEL_SELECTION) {
-										RemoveSelectionsNotFromModel(rectFoundGameObjects, SelectionUtility.LastUsedModel);
-									}
+									PostProcessSelections(rectFoundGameObjects, SelectionUtility.LastUsedModel, PREVENT_MULTI_MODEL_SELECTION);
 								} else
 								{
 									if (rectFoundGameObjects != null &&
@@ -456,7 +454,7 @@ namespace RealtimeCSG
 			}			
 		}
 	
-		internal static void RemoveSelectionsNotFromModel(HashSet<GameObject> foundGameObjects, CSGModel mainModel) {
+		internal static void PostProcessSelections(HashSet<GameObject> foundGameObjects, CSGModel mainModel, bool removeNotFromModel) {
             Transform currentModelTransform = mainModel.transform;
             CSGModel[] allModels = CSGModelManager.GetAllModels();
             int modelCount = allModels.Length;
@@ -473,17 +471,24 @@ namespace RealtimeCSG
                 CSGNode foundNode = found.GetComponent<CSGNode>();
                 if (foundNode == null) { continue; }
 
-
-                Transform parent = foundNode.transform.parent;
-                while (parent != null) { // walk up the chain...
-                    for (int m = 0; m < modelCount; m++) {
-                        if (parent == allModelTransformBuffer[m]) { // this is a model!
-                            if (parent != currentModelTransform) { Debug.Log($"REMOVING {found}"); foundGameObjects.Remove(found); } // but not the currently selected model!
-                            break;
-                        }
-                    }
-                    parent = parent.parent;
+				// remove disabled objects
+                if(SceneVisibilityManager.instance.IsPickingDisabled(found)) {
+					foundGameObjects.Remove(found);
+					continue;
                 }
+
+				if(removeNotFromModel) {
+					Transform parent = foundNode.transform.parent;
+					while (parent != null) { // walk up the chain...
+						for (int m = 0; m < modelCount; m++) {
+							if (parent == allModelTransformBuffer[m]) { // this is a model!
+								if (parent != currentModelTransform) { Debug.Log($"REMOVING {found}"); foundGameObjects.Remove(found); } // but not the currently selected model!
+								break;
+							}
+						}
+						parent = parent.parent;
+					}
+				}
             }
 
             ArrayPool<Transform>.Shared.Return(allModelTransformBuffer);

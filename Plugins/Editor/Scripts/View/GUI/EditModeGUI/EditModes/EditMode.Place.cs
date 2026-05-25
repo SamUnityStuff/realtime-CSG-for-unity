@@ -2725,14 +2725,14 @@ namespace RealtimeCSG
 		{
 			scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
 			{
-				EditModePlaceGUI.OnInspectorGUI(window, height);
+				EditmodePlaceGUI.OnInspectorGUI(window, height);
 			}
 			EditorGUILayout.EndScrollView();
 		}
 		
 		public Rect GetLastSceneGUIRect()
 		{
-			return EditModePlaceGUI.GetLastSceneGUIRect(this);
+			return EditmodePlaceGUI.GetLastSceneGUIRect(this);
 		}
 
 		public bool OnSceneGUI(Rect windowRect)
@@ -2740,16 +2740,8 @@ namespace RealtimeCSG
 			if (brushes == null || brushes.Length == 0)
 				return false;
 			
-			EditModePlaceGUI.OnSceneGUI(windowRect, this);
+			EditmodePlaceGUI.OnSceneGUI(windowRect, this);
 			return false;
 		}
-
-        public void OnIMGUIContents() {
-            EditModePlaceGUI.OnGUIContents(true, this);
-        }
-
-        public string GetModeName() {
-            return "Place";
-        }
-    }
+	}
 }

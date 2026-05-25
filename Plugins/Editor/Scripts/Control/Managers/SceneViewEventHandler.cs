@@ -70,7 +70,7 @@ namespace RealtimeCSG
                 // There's likely some redundant code here now too.
                 // I can almost definitely eliminate some now that hasOffset of SceneViewBottomBarGUI.ShowGUI should *never be true*
                 // FIX: https://github.com/LogicalError/realtime-CSG-for-unity/issues/385
-                //SceneViewBottomBarGUI.ShowGUI( sceneView , false );
+                SceneViewBottomBarGUI.ShowGUI( sceneView , false );
                 SceneViewInfoGUI.DrawInfoGUI( sceneView );
             }
 
@@ -82,7 +82,7 @@ namespace RealtimeCSG
 
                 if( Event.current.type == EventType.Repaint )
                 {
-                    //SceneViewBottomBarGUI.ShowGUI( sceneView, false );
+                    SceneViewBottomBarGUI.ShowGUI( sceneView, false );
                     SceneViewInfoGUI.DrawInfoGUI( sceneView );
                 }
 

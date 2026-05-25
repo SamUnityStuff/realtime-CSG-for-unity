@@ -3575,12 +3575,5 @@ namespace RealtimeCSG
 			EditModeMeshModeGUI.OnSceneGUI(windowRect, this);
 			return true;
 		}
-        public void OnIMGUIContents() {
-            EditModeMeshModeGUI.OnGUIContents(true, this);
-        }
-
-        public string GetModeName() {
-            return "Edit";
-        }
-    }
+	}
 }

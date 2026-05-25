@@ -12,63 +12,12 @@ namespace RealtimeCSG
 	{
 		static int BottomBarEditorOverlayHash	= "BottomBarEditorOverlay".GetHashCode();
 		static int BottomBarGUIHash				= "BottomBarGUI".GetHashCode();
-
-		public static void ShowGUI(SceneView sceneView, bool haveOffset = true)
-		{
-			InitStyles();
-			CSG_GUIStyleUtility.InitStyles();
-			if (sceneView != null)
-			{
-                #if UNITY_2018_3_OR_NEWER
-				float height = sceneView.rootVisualElement.contentRect.height; //Screen.height;
-				float width  = sceneView.rootVisualElement.contentRect.width;  //Screen.width;
-#else
-                float height = sceneView.position.height;
-                float width  = sceneView.position.width;
-                #endif
-                
-				Rect  bottomBarRect;
-				if (haveOffset)
-				{
-					bottomBarRect = new Rect(0, height - (CSG_GUIStyleUtility.BottomToolBarHeight + 18), 
-											  width, CSG_GUIStyleUtility.BottomToolBarHeight);
-				} else
-					bottomBarRect = new Rect(0, height - (CSG_GUIStyleUtility.BottomToolBarHeight + 1), width, CSG_GUIStyleUtility.BottomToolBarHeight);
-
-				try
-				{ 
-					Handles.BeginGUI();
-					
-					bool prevGUIChanged = GUI.changed;
-					if (Event.current.type == EventType.Repaint)
-						CSG_GUIStyleUtility.BottomToolBarStyle.Draw(bottomBarRect, false, false, false, false);
-					OnBottomBarGUI(sceneView, bottomBarRect);
-					GUI.changed = prevGUIChanged || GUI.changed;
-					
-					int controlID = GUIUtility.GetControlID(BottomBarGUIHash, FocusType.Keyboard, bottomBarRect);
-					var type = Event.current.GetTypeForControl(controlID);
-					switch (type)
-					{
-						case EventType.MouseDown: { if (bottomBarRect.Contains(Event.current.mousePosition)) { GUIUtility.hotControl = controlID; GUIUtility.keyboardControl = controlID; Event.current.Use(); } break; }
-						case EventType.MouseMove: { if (bottomBarRect.Contains(Event.current.mousePosition)) { Event.current.Use(); } break; }
-						case EventType.MouseUp:   { if (GUIUtility.hotControl == controlID) { GUIUtility.hotControl = 0; GUIUtility.keyboardControl = 0; Event.current.Use(); } break; }
-						case EventType.MouseDrag: { if (GUIUtility.hotControl == controlID) { Event.current.Use(); } break; }
-						case EventType.ScrollWheel: { if (bottomBarRect.Contains(Event.current.mousePosition)) { Event.current.Use(); } break; }
-					}
-
-					//TooltipUtility.HandleAreaOffset(new Vector2(-bottomBarRect.xMin, -bottomBarRect.yMin));
-				}
-				finally
-				{
-					Handles.EndGUI();
-				}
-			}
-		}
-
 		
 		static Rect currentRect = new Rect();
-		static void OnBottomBarGUI(SceneView sceneView, Rect barSize)
+		internal static void OnBottomBarGUI(SceneView sceneView, Rect barSize, int viewWidth)
 		{
+            InitStyles();
+            CSG_GUIStyleUtility.InitStyles();
 			//if (Event.current.type == EventType.Layout)
 			//	return;
 
@@ -87,12 +36,6 @@ namespace RealtimeCSG
 			var skin			= CSG_GUIStyleUtility.Skin;
 			var updateSurfaces	= false;
 			bool wireframeModified = false;
-
-#if UNITY_2018_3_OR_NEWER
-			var viewWidth = sceneView.rootVisualElement.contentRect.width;
-#else
-            var viewWidth = sceneView.position.width;
-#endif
 
 			float layoutHeight = barSize.height;
 			float layoutX = 6.0f;

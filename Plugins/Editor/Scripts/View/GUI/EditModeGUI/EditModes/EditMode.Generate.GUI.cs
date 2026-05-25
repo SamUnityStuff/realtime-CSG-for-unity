@@ -155,7 +155,7 @@ namespace RealtimeCSG
 
 		static Vector2 scrollPos;
 		static Rect[] shapeModeRects;
-		static void OnGUIContents(EditModeGenerate tool, bool isSceneGUI, float height)
+		internal static void OnGUIContents(EditModeGenerate tool, bool isSceneGUI, float height)
 		{
 			if (!isSceneGUI)
 			{

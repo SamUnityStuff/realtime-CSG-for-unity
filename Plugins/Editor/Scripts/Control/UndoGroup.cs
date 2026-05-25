@@ -37,7 +37,7 @@ namespace RealtimeCSG
 			_undoGroupIndex = -1;
 
 			_brushes = uniqueBrushes.ToArray();
-			if (_brushes.Length > 0)
+            if (_brushes != null && _brushes.Length > 0) 
 			{
 				if (!ignoreGroup)
 				{

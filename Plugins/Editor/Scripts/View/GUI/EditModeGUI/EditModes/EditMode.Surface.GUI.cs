@@ -461,7 +461,7 @@ namespace RealtimeCSG
 		const int surfaceFlagsBoxHeight		= 56;
 		
 		const int surfaceEditTitleHeight	= 16;
-		const int surfaceEditWindowHeight   = surfaceEditTitleHeight	+ 
+		internal const int surfaceEditWindowHeight   = surfaceEditTitleHeight	+ 
 
 											  materialViewBoxHeight		+ boxOffset +
 											  textureLockedBoxHeight	+ boxOffset +
@@ -472,7 +472,7 @@ namespace RealtimeCSG
 
 											  13;
 
-		private static void OnGUIContents(Rect rect, EditModeSurface tool, bool needLightmapUVUpdate)
+		internal static void OnGUIContents(Rect rect, EditModeSurface tool, bool needLightmapUVUpdate)
 		{
 			if (Event.current.type == EventType.Layout)
 			{

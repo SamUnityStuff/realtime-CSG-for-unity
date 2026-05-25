@@ -351,5 +351,16 @@ namespace RealtimeCSG
 			BuilderMode = ShapeMode.FreeDraw;
 			freedrawGenerator.GenerateFromPolygon(camera, brush, plane, direction, meshVertices, indices, smoothingGroups, drag, forceDragSource, autoCommitExtrusion);
 		}
-	}
+
+        public void OnIMGUIContents() {
+            GUILayout.BeginVertical(GUILayout.MaxWidth(300));
+            EditModeGenerateGUI.OnGUIContents(this, true, 0);
+            GUILayout.EndVertical();
+        }
+
+        public string GetModeName() {
+            return "Generate";
+        }
+
+    }
 }

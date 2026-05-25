@@ -9,7 +9,7 @@ using RealtimeCSG.Foundation;
 
 namespace RealtimeCSG
 {
-	internal sealed partial class EditmodePlaceGUI
+	internal sealed partial class EditModePlaceGUI
 	{
 		static int SceneViewMeshOverlayHash = "SceneViewMeshOverlay".GetHashCode();
 
@@ -181,7 +181,7 @@ namespace RealtimeCSG
 			EditorGUI.EndDisabledGroup();
 		}
 
-		static void OnGUIContents(bool isSceneGUI, EditModePlace tool)
+		internal static void OnGUIContents(bool isSceneGUI, EditModePlace tool)
 		{
 			EditModeCommonGUI.StartToolGUI();
 

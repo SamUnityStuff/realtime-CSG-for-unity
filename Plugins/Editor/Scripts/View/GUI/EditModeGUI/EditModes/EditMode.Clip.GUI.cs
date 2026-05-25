@@ -88,7 +88,7 @@ namespace RealtimeCSG
 			}
 		}
 
-		static void OnGUIContents(bool isSceneGUI, EditModeClip tool)
+		internal static void OnGUIContents(bool isSceneGUI, EditModeClip tool)
 		{
 			EditModeCommonGUI.StartToolGUI();
 

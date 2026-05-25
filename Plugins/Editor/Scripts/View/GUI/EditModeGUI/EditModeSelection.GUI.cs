@@ -63,8 +63,6 @@ namespace RealtimeCSG
 				}
 				GUILayout.EndArea();
 
-				if (RealtimeCSG.CSGSettings.EnableRealtimeCSG && !SceneDragToolManager.IsDraggingObjectInScene)
-					SceneViewBottomBarGUI.ShowGUI(sceneView, haveOffset: false);
 			}
 			GUI.skin = originalSkin;
 			Handles.BeginGUI();
@@ -130,42 +128,7 @@ namespace RealtimeCSG
 
 
 				var bounds = new Rect(10, 10 + topBarSize, 500, 40);
-#if !UNITY_2021_3_OR_NEWER
-				GUILayout.BeginArea(bounds, ContentTitleLabel, windowStyle);
-				{
-					//GUILayout.Space(bounds.height);
-					Rect editModeBounds;
-			
-					CSG_GUIStyleUtility.InitStyles();
-					EditorGUI.BeginChangeCheck();
-					var newEditMode = (ToolEditMode)CSG_EditorGUIUtility.ToolbarWrapped((int)EditModeManager.EditMode, ref editModeRects, out editModeBounds, CSG_GUIStyleUtility.brushEditModeContent, CSG_GUIStyleUtility.brushEditModeTooltips, yOffset:20, areaWidth: bounds.width);
-					//var newEditMode = (ToolEditMode)GUILayout.Toolbar((int)CSGBrushEditorManager.EditMode, GUIStyleUtility.brushEditModeContent, GUIStyleUtility.brushEditModeTooltips);
-					if (EditorGUI.EndChangeCheck())
-					{
-						EditModeManager.EditMode = newEditMode;
-						CSG_EditorGUIUtility.RepaintAll();
-					}
-				
-					var buttonArea = bounds;
-					buttonArea.x = bounds.width - 17;
-					buttonArea.y = 2;
-					buttonArea.height = 13;
-					buttonArea.width = 13;
-					if (GUI.Button(buttonArea, GUIContent.none, Compatibility.WinBtnClose))
-                        EditModeToolWindowSceneGUI.GetWindow();
-						
-					TooltipUtility.SetToolTip(CSG_GUIStyleUtility.PopOutTooltip, buttonArea); 
 
-					var versionWidth = CSG_GUIStyleUtility.versionLabelStyle.CalcSize(VersionLabel);
-					var versionArea = bounds;
-					versionArea.x = bounds.width - (17 + versionWidth.x);
-					versionArea.y = 1;
-					versionArea.height = 15;
-					versionArea.width = versionWidth.x;
-					GUI.Label(versionArea, VersionLabel, CSG_GUIStyleUtility.versionLabelStyle);
-				}
-				GUILayout.EndArea();
-#endif
 
 				int controlID = GUIUtility.GetControlID(SceneViewBrushEditorOverlayHash, FocusType.Keyboard, bounds);
 				switch (Event.current.GetTypeForControl(controlID))

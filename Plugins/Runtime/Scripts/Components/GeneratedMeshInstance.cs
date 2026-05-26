@@ -143,7 +143,6 @@ namespace InternalRealtimeCSG
 		[NonSerialized] [HideInInspector] public MeshCollider	CachedMeshCollider;
 		[NonSerialized] [HideInInspector] public MeshFilter		CachedMeshFilter;
 		[NonSerialized] [HideInInspector] public MeshRenderer	CachedMeshRenderer;
-		[NonSerialized] [HideInInspector] public System.Object	CachedMeshRendererSO;
 
         public void Reset()
         {

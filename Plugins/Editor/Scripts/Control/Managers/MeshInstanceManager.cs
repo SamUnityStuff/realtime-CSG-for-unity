@@ -15,366 +15,321 @@ using UnityEditor.SceneManagement;
 
 namespace InternalRealtimeCSG
 {
-	internal sealed partial class MeshInstanceManager
-	{
+    internal sealed partial class MeshInstanceManager
+    {
 #if SHOW_GENERATED_MESHES
 		public const HideFlags ComponentHideFlags = HideFlags.DontSaveInBuild;
 #else
-		public const HideFlags ComponentHideFlags = HideFlags.None
-													//| HideFlags.NotEditable       // when this is put into a prefab (when making a prefab containing a model for instance) this will make it impossible to delete 
-													//| HideFlags.HideInInspector   // apparently, when set, can cause issues with selection in sceneview 
-													| HideFlags.HideInHierarchy
-													| HideFlags.DontSaveInBuild
-			;
+        public const HideFlags ComponentHideFlags = HideFlags.None
+                                                    //| HideFlags.NotEditable       // when this is put into a prefab (when making a prefab containing a model for instance) this will make it impossible to delete 
+                                                    //| HideFlags.HideInInspector   // apparently, when set, can cause issues with selection in sceneview 
+                                                    | HideFlags.HideInHierarchy
+                                                    | HideFlags.DontSaveInBuild
+            ;
 #endif
 
-		internal const string MeshContainerName			= "[generated-meshes]";
-		private const string RenderMeshInstanceName		= "[generated-render-mesh]";
-		private const string ColliderMeshInstanceName	= "[generated-collider-mesh]";
-		private const string HelperMeshInstanceName		= "[generated-helper-mesh]";
+        internal const string MeshContainerName = "[generated-meshes]";
+        private const string RenderMeshInstanceName = "[generated-render-mesh]";
+        private const string ColliderMeshInstanceName = "[generated-collider-mesh]";
+        private const string HelperMeshInstanceName = "[generated-helper-mesh]";
 
-		public static void Shutdown()
-		{
-		}
+        public static void Shutdown() {
+        }
 
-		public static void OnDestroyed(GeneratedMeshes container)
-		{
-		}
+        public static void OnDestroyed(GeneratedMeshes container) {
+        }
 
-		public static void Destroy(GeneratedMeshes generatedMeshes)
-		{
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return;
+        public static void Destroy(GeneratedMeshes generatedMeshes) {
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+                return;
 
-			if (!generatedMeshes)
-				return;
+            if (!generatedMeshes)
+                return;
 
-			if (generatedMeshes.owner)
-				generatedMeshes.owner.generatedMeshes = null;
+            if (generatedMeshes.owner)
+                generatedMeshes.owner.generatedMeshes = null;
 
-			generatedMeshes.owner = null;
+            generatedMeshes.owner = null;
             GameObjectExtensions.Destroy(generatedMeshes.gameObject);
 
-			// Undo.DestroyObjectImmediate // NOTE: why was this used before?
-			// can't use Undo variant here because it'll mark scenes as dirty on load ..
-		}
+            // Undo.DestroyObjectImmediate // NOTE: why was this used before?
+            // can't use Undo variant here because it'll mark scenes as dirty on load ..
+        }
 
-		public static void OnCreated(GeneratedMeshes container)
-		{
-			ValidateGeneratedMeshesDelayed(container);
-		}
+        public static void OnCreated(GeneratedMeshes container) {
+            ValidateGeneratedMeshesDelayed(container);
+        }
 
-		public static void OnEnable(GeneratedMeshes container)
-		{
-			if (container)
-				container.gameObject.SetActive(true);
-		}
+        public static void OnEnable(GeneratedMeshes container) {
+            if (container)
+                container.gameObject.SetActive(true);
+        }
 
-		public static void OnDisable(GeneratedMeshes container)
-		{
-			if (container)
-				container.gameObject.SetActive(false);
-		}
-		
-		public static void OnCreated(GeneratedMeshInstance meshInstance)
-		{
-			var parent = meshInstance.transform.parent;
-			GeneratedMeshes container = null;
-			if (parent)
-				container = parent.GetComponent<GeneratedMeshes>();
-			if (!container)
-			{
+        public static void OnDisable(GeneratedMeshes container) {
+            if (container)
+                container.gameObject.SetActive(false);
+        }
+
+        public static void OnCreated(GeneratedMeshInstance meshInstance) {
+            var parent = meshInstance.transform.parent;
+            GeneratedMeshes container = null;
+            if (parent)
+                container = parent.GetComponent<GeneratedMeshes>();
+            if (!container) {
                 GameObjectExtensions.Destroy(meshInstance.gameObject);
-				return;
-			}
+                return;
+            }
 
-			//EnsureValidHelperMaterials(container.owner, meshInstance);
+            //EnsureValidHelperMaterials(container.owner, meshInstance);
 
-			Initialize(container, meshInstance);
+            Initialize(container, meshInstance);
 
-			var key = meshInstance.GenerateKey();
-			if (container.GetMeshInstance(key) != meshInstance)
-			{
-				if (meshInstance && meshInstance.gameObject)
-				{
+            var key = meshInstance.GenerateKey();
+            if (container.GetMeshInstance(key) != meshInstance) {
+                if (meshInstance && meshInstance.gameObject) {
                     GameObjectExtensions.Destroy(meshInstance.gameObject);
-				}
-			}
-		}
+                }
+            }
+        }
 
 
-		static void Initialize(GeneratedMeshes container, GeneratedMeshInstance meshInstance)
-		{
-			// Retain layer
-			meshInstance.gameObject.layer = container.gameObject.layer;
+        static void Initialize(GeneratedMeshes container, GeneratedMeshInstance meshInstance) {
+            // Retain layer
+            meshInstance.gameObject.layer = container.gameObject.layer;
 
-			container.AddMeshInstance(meshInstance);
-		}
+            container.AddMeshInstance(meshInstance);
+        }
 
-		static void Initialize(GeneratedMeshes container, HelperSurfaceDescription helperSurface)
-		{
+        static void Initialize(GeneratedMeshes container, HelperSurfaceDescription helperSurface) {
             container.AddHelperSurface(helperSurface);
-		}
+        }
 
 
 
-		private readonly static HashSet<GeneratedMeshes> validateGeneratedMeshes = new HashSet<GeneratedMeshes>();
-		private readonly static HashSet<CSGModel> validateModelWithChildren = new HashSet<CSGModel>();
-		private readonly static HashSet<CSGModel> validateModelWithoutChildren = new HashSet<CSGModel>();
+        private readonly static HashSet<GeneratedMeshes> validateGeneratedMeshes = new HashSet<GeneratedMeshes>();
+        private readonly static HashSet<CSGModel> validateModelWithChildren = new HashSet<CSGModel>();
+        private readonly static HashSet<CSGModel> validateModelWithoutChildren = new HashSet<CSGModel>();
 
-		public static void Update()
-		{
-			var models = CSGModelManager.GetAllModels();
-			for (var i = 0; i < models.Length; i++)
-			{
-				var model = models[i];
+        public static void Update() {
+            var models = CSGModelManager.GetAllModels();
+            for (var i = 0; i < models.Length; i++) {
+                var model = models[i];
                 if (ModelTraits.IsModelEditable(model))
-					MeshInstanceManager.ValidateModelDelayed(model);
-			}
+                    MeshInstanceManager.ValidateModelDelayed(model);
+            }
 
-			ignoreValidateModelDelayed = true;
-			try
-			{
-				if (validateModelWithChildren.Count > 0)
-				{
-					foreach (var model in validateModelWithChildren)
-						ValidateModelNow(model, checkChildren: true);
-					validateModelWithChildren.Clear();
-				}
-				if (validateModelWithoutChildren.Count > 0)
-				{
-					foreach (var model in validateModelWithoutChildren)
-						ValidateModelNow(model, checkChildren: false);
-					validateModelWithoutChildren.Clear();
-				}
-			}
-			finally
-			{
-				ignoreValidateModelDelayed = false;
-			}
+            ignoreValidateModelDelayed = true;
+            try {
+                if (validateModelWithChildren.Count > 0) {
+                    foreach (var model in validateModelWithChildren)
+                        ValidateModelNow(model, checkChildren: true);
+                    validateModelWithChildren.Clear();
+                }
+                if (validateModelWithoutChildren.Count > 0) {
+                    foreach (var model in validateModelWithoutChildren)
+                        ValidateModelNow(model, checkChildren: false);
+                    validateModelWithoutChildren.Clear();
+                }
+            } finally {
+                ignoreValidateModelDelayed = false;
+            }
 
-			for (var i = 0; i < models.Length; i++)
-			{
-				var model = models[i];
+            for (var i = 0; i < models.Length; i++) {
+                var model = models[i];
                 if (!ModelTraits.IsModelEditable(model))
-					continue;
+                    continue;
 
-				var meshContainer = model.generatedMeshes;
-				if (!meshContainer)
-					continue;
+                var meshContainer = model.generatedMeshes;
+                if (!meshContainer)
+                    continue;
 
-				if (!meshContainer.HasMeshInstances)
-				{
-					MeshInstanceManager.ValidateGeneratedMeshesDelayed(meshContainer);
-					continue;
-				}
-			}
+                if (!meshContainer.HasMeshInstances) {
+                    MeshInstanceManager.ValidateGeneratedMeshesDelayed(meshContainer);
+                    continue;
+                }
+            }
 
-			if (validateGeneratedMeshes.Count > 0)
-			{
-                foreach (var generatedMeshes in validateGeneratedMeshes)
-                {
+            if (validateGeneratedMeshes.Count > 0) {
+                foreach (var generatedMeshes in validateGeneratedMeshes) {
                     var prevModel = generatedMeshes ? generatedMeshes.owner : null;
-                    if (ValidateGeneratedMeshesNow(generatedMeshes))
-                    {
+                    if (ValidateGeneratedMeshesNow(generatedMeshes)) {
                         if (prevModel)
                             prevModel.forceUpdate = true;
                     }
                 }
-				validateGeneratedMeshes.Clear();
-			}
-
-			
-			MeshInstanceManager.UpdateTransforms();
-		}
-
-		public static void ValidateGeneratedMeshesDelayed(GeneratedMeshes meshContainer)
-		{
-			validateGeneratedMeshes.Add(meshContainer);
-		}
+                validateGeneratedMeshes.Clear();
+            }
 
 
-		static bool ignoreValidateModelDelayed = false;
-		internal static void ValidateModelDelayed(CSGModel model, bool checkChildren = false)
-		{
-			if (ignoreValidateModelDelayed)
-				return;
-			if (checkChildren)
-			{
-				validateModelWithChildren.Add(model);
-				validateModelWithoutChildren.Remove(model);
-			} else
-			{
-				if (!validateModelWithChildren.Contains(model))
-					validateModelWithoutChildren.Add(model);
-			}
-		}
+            MeshInstanceManager.UpdateTransforms();
+        }
 
-		static void UpdateGeneratedMeshesFlags(CSGModel model, GeneratedMeshes generatedMeshes)
-		{
-			if (!generatedMeshes)
-				return;
-			
-			if (generatedMeshes.enabled == false)
-				generatedMeshes.enabled = true;
-			var generatedMeshesGameObject = generatedMeshes.gameObject;
-			var activated = (model.enabled && model.gameObject.activeSelf);
-			if (generatedMeshesGameObject.activeSelf != activated)
-				generatedMeshesGameObject.SetActive(activated);
-		}
+        public static void ValidateGeneratedMeshesDelayed(GeneratedMeshes meshContainer) {
+            validateGeneratedMeshes.Add(meshContainer);
+        }
 
-		static GeneratedMeshes EnsureOneValidGeneratedMeshesComponent(CSGModel model)
-		{
+
+        static bool ignoreValidateModelDelayed = false;
+        internal static void ValidateModelDelayed(CSGModel model, bool checkChildren = false) {
+            if (ignoreValidateModelDelayed)
+                return;
+            if (checkChildren) {
+                validateModelWithChildren.Add(model);
+                validateModelWithoutChildren.Remove(model);
+            } else {
+                if (!validateModelWithChildren.Contains(model))
+                    validateModelWithoutChildren.Add(model);
+            }
+        }
+
+        static void UpdateGeneratedMeshesFlags(CSGModel model, GeneratedMeshes generatedMeshes) {
+            if (!generatedMeshes)
+                return;
+
+            if (generatedMeshes.enabled == false)
+                generatedMeshes.enabled = true;
+            var generatedMeshesGameObject = generatedMeshes.gameObject;
+            var activated = (model.enabled && model.gameObject.activeSelf);
+            if (generatedMeshesGameObject.activeSelf != activated)
+                generatedMeshesGameObject.SetActive(activated);
+        }
+
+        static GeneratedMeshes EnsureOneValidGeneratedMeshesComponent(CSGModel model) {
             if (!model.isActiveAndEnabled)
                 return null;
 
-			// Find all the GeneratedMeshes inside this model
-			var foundGeneratedMeshes = model.GetComponentsInChildren<GeneratedMeshes>(true);
-			// If we have CSGModel components inside this CSGModel component, we ignore all the GeneratedMeshes inside those ..
-			for (var i = foundGeneratedMeshes.Length - 1; i >= 0; i--)
-			{
+            // Find all the GeneratedMeshes inside this model
+            var foundGeneratedMeshes = model.GetComponentsInChildren<GeneratedMeshes>(true);
+            // If we have CSGModel components inside this CSGModel component, we ignore all the GeneratedMeshes inside those ..
+            for (var i = foundGeneratedMeshes.Length - 1; i >= 0; i--) {
                 var models = foundGeneratedMeshes[i].GetComponentsInParent<CSGModel>(includeInactive: true);
                 var parentModel = models.Length == 0 ? null : models[0];
-				if (parentModel != model)
-				{
-					// TODO: should just swap with last element + keep track of our own count in array and use that below
-					ArrayUtility.RemoveAt(ref foundGeneratedMeshes, i);
-				}
-			}
+                if (parentModel != model) {
+                    // TODO: should just swap with last element + keep track of our own count in array and use that below
+                    ArrayUtility.RemoveAt(ref foundGeneratedMeshes, i);
+                }
+            }
 
 
-			if (foundGeneratedMeshes.Length > 1)
-			{
-				var prevGeneratedMeshes = model.generatedMeshes;
-				GeneratedMeshes newGeneratedMeshes = null;
+            if (foundGeneratedMeshes.Length > 1) {
+                var prevGeneratedMeshes = model.generatedMeshes;
+                GeneratedMeshes newGeneratedMeshes = null;
 
-				// Check if we have more than one GeneratedMeshes component, this can happen, for instance, 
-				//	due to prefab merging issues or if the user duplicates the gameObject
+                // Check if we have more than one GeneratedMeshes component, this can happen, for instance, 
+                //	due to prefab merging issues or if the user duplicates the gameObject
 
-				for (var i = foundGeneratedMeshes.Length - 1; i >= 0; i--)
-				{
-					var generatedMeshesComponent = foundGeneratedMeshes[i];
-					if (!generatedMeshesComponent)
-						continue;
+                for (var i = foundGeneratedMeshes.Length - 1; i >= 0; i--) {
+                    var generatedMeshesComponent = foundGeneratedMeshes[i];
+                    if (!generatedMeshesComponent)
+                        continue;
 
-					var generatedMeshesGameObject = generatedMeshesComponent.gameObject;
-					if (!newGeneratedMeshes ||
-						// Prefer to keep the GeneratedMesh that is currently used by the Model
-						generatedMeshesComponent == prevGeneratedMeshes)
-					{
-						// if the we already found a GeneratedMesh, and it's valid, try to see if we can destroy it
-						if (newGeneratedMeshes)
-						{
-							var newGeneratedMeshesGameObject = newGeneratedMeshes.gameObject;
-							if (GameObjectExtensions.TryDestroy(newGeneratedMeshesGameObject))
-							{
-								newGeneratedMeshes = generatedMeshesComponent;
-								continue;
-							}
-							// Fall through, we need to destroy this component after all
-						} else
-						{
-							newGeneratedMeshes = generatedMeshesComponent;
-							continue;
-						}
-					}
+                    var generatedMeshesGameObject = generatedMeshesComponent.gameObject;
+                    if (!newGeneratedMeshes ||
+                        // Prefer to keep the GeneratedMesh that is currently used by the Model
+                        generatedMeshesComponent == prevGeneratedMeshes) {
+                        // if the we already found a GeneratedMesh, and it's valid, try to see if we can destroy it
+                        if (newGeneratedMeshes) {
+                            var newGeneratedMeshesGameObject = newGeneratedMeshes.gameObject;
+                            if (GameObjectExtensions.TryDestroy(newGeneratedMeshesGameObject)) {
+                                newGeneratedMeshes = generatedMeshesComponent;
+                                continue;
+                            }
+                            // Fall through, we need to destroy this component after all
+                        } else {
+                            newGeneratedMeshes = generatedMeshesComponent;
+                            continue;
+                        }
+                    }
 
-					// Try to destroy the GeneratedMeshes gameObject
-					if (!GameObjectExtensions.TryDestroy(generatedMeshesGameObject))
-					{
-						// If the we already found a GeneratedMesh, and it's valid, try to see if we can destroy that instead
-						var newGeneratedMeshesGameObject = newGeneratedMeshes.gameObject;
-						if (!GameObjectExtensions.TryDestroy(newGeneratedMeshesGameObject))
-						{
+                    // Try to destroy the GeneratedMeshes gameObject
+                    if (!GameObjectExtensions.TryDestroy(generatedMeshesGameObject)) {
+                        // If the we already found a GeneratedMesh, and it's valid, try to see if we can destroy that instead
+                        var newGeneratedMeshesGameObject = newGeneratedMeshes.gameObject;
+                        if (!GameObjectExtensions.TryDestroy(newGeneratedMeshesGameObject)) {
                             // Fall back to disabling the component instead
                             GameObjectExtensions.Destroy(newGeneratedMeshesGameObject);
-						} 
-						prevGeneratedMeshes = null;
-						newGeneratedMeshes = generatedMeshesComponent;
-					}
-				}
+                        }
+                        prevGeneratedMeshes = null;
+                        newGeneratedMeshes = generatedMeshesComponent;
+                    }
+                }
 
-				model.generatedMeshes = newGeneratedMeshes;
-				if (model.generatedMeshes)
-				{
-					model.generatedMeshes.owner = model;
-					UpdateGeneratedMeshesFlags(model, model.generatedMeshes);
+                model.generatedMeshes = newGeneratedMeshes;
+                if (model.generatedMeshes) {
+                    model.generatedMeshes.owner = model;
+                    UpdateGeneratedMeshesFlags(model, model.generatedMeshes);
                     if (ValidateGeneratedMeshesNow(model.generatedMeshes, skipSiblingCheck: true) && model)
                         model.forceUpdate = true;
-					return model.generatedMeshes;
-				}
+                    return model.generatedMeshes;
+                }
 
-				// Fall through, create a new GeneratedMeshes component
-			} else
-			if (foundGeneratedMeshes.Length == 1)
-			{
-				model.generatedMeshes = foundGeneratedMeshes[0];
-				model.generatedMeshes.owner = model;
-				UpdateGeneratedMeshesFlags(model, model.generatedMeshes);
+                // Fall through, create a new GeneratedMeshes component
+            } else
+            if (foundGeneratedMeshes.Length == 1) {
+                model.generatedMeshes = foundGeneratedMeshes[0];
+                model.generatedMeshes.owner = model;
+                UpdateGeneratedMeshesFlags(model, model.generatedMeshes);
                 if (ValidateGeneratedMeshesNow(model.generatedMeshes, skipSiblingCheck: true) && model)
                     model.forceUpdate = true;
-				return model.generatedMeshes;
-			}
+                return model.generatedMeshes;
+            }
 
 
-			// Create it if it doesn't exist
-			var generatedMeshesObject = new GameObject(MeshContainerName);
-			generatedMeshesObject.SetActive(false);
+            // Create it if it doesn't exist
+            var generatedMeshesObject = new GameObject(MeshContainerName);
+            generatedMeshesObject.SetActive(false);
 
-			var generatedMeshes = generatedMeshesObject.AddComponent<GeneratedMeshes>();
-			generatedMeshes.owner = model;
+            var generatedMeshes = generatedMeshesObject.AddComponent<GeneratedMeshes>();
+            generatedMeshes.owner = model;
 
-			var generatedMeshesTransform = generatedMeshesObject.transform;
-			generatedMeshesTransform.SetParent(model.transform, false);
+            var generatedMeshesTransform = generatedMeshesObject.transform;
+            generatedMeshesTransform.SetParent(model.transform, false);
 
-			// Retain layer
-			generatedMeshesObject.layer = model.gameObject.layer;
+            // Retain layer
+            generatedMeshesObject.layer = model.gameObject.layer;
 
-			generatedMeshesObject.SetActive(true);
+            generatedMeshesObject.SetActive(true);
 
-			UpdateGeneratedMeshesVisibility(generatedMeshes, model.ShowGeneratedMeshes);
-			UpdateGeneratedMeshesFlags(model, generatedMeshes);
-			model.generatedMeshes = generatedMeshes;
-			model.generatedMeshes.owner = model;
-			return generatedMeshes;
-		}
+            UpdateGeneratedMeshesVisibility(generatedMeshes, model.ShowGeneratedMeshes);
+            UpdateGeneratedMeshesFlags(model, generatedMeshes);
+            model.generatedMeshes = generatedMeshes;
+            model.generatedMeshes.owner = model;
+            return generatedMeshes;
+        }
 
-		internal static bool ValidateModelNow(CSGModel model, bool checkChildren = false)
-        {
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return true;
+        internal static bool ValidateModelNow(CSGModel model, bool checkChildren = false) {
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+                return true;
 
-			if (!checkChildren && 
-				model.generatedMeshes && 
-				model.generatedMeshes.owner == model)
-				return true;
+            if (!checkChildren &&
+                model.generatedMeshes &&
+                model.generatedMeshes.owner == model)
+                return true;
 
             if (!ModelTraits.IsModelEditable(model) ||
                 !model.isActiveAndEnabled)
                 return false;
 
-			EnsureOneValidGeneratedMeshesComponent(model);
+            EnsureOneValidGeneratedMeshesComponent(model);
 
             //model.forceUpdate = true; // TODO: this causes issues where models are constantly force updated
             return true;
-		}
+        }
 
-		private static bool ShouldRenderHelperSurface(RenderSurfaceType renderSurfaceType)
-		{
-			switch (renderSurfaceType)
-			{
-				case RenderSurfaceType.Hidden:			return CSGSettings.ShowHiddenSurfaces;
-				case RenderSurfaceType.Culled:			return CSGSettings.ShowCulledSurfaces;
-				case RenderSurfaceType.Collider:		return CSGSettings.ShowColliderSurfaces;
-				case RenderSurfaceType.Trigger:			return CSGSettings.ShowTriggerSurfaces;
-				case RenderSurfaceType.ShadowOnly:		
-				case RenderSurfaceType.CastShadows:		return CSGSettings.ShowCastShadowsSurfaces;
-				case RenderSurfaceType.ReceiveShadows:	return CSGSettings.ShowReceiveShadowsSurfaces;
-			}
-			return false;
-		}
+        private static bool ShouldRenderHelperSurface(RenderSurfaceType renderSurfaceType) {
+            switch (renderSurfaceType) {
+                case RenderSurfaceType.Hidden: return CSGSettings.ShowHiddenSurfaces;
+                case RenderSurfaceType.Culled: return CSGSettings.ShowCulledSurfaces;
+                case RenderSurfaceType.Collider: return CSGSettings.ShowColliderSurfaces;
+                case RenderSurfaceType.Trigger: return CSGSettings.ShowTriggerSurfaces;
+                case RenderSurfaceType.ShadowOnly:
+                case RenderSurfaceType.CastShadows: return CSGSettings.ShowCastShadowsSurfaces;
+                case RenderSurfaceType.ReceiveShadows: return CSGSettings.ShowReceiveShadowsSurfaces;
+            }
+            return false;
+        }
 
-		/*
+        /*
 		private static RenderSurfaceType EnsureValidHelperMaterials(CSGModel model, GeneratedMeshInstance meshInstance)
 		{
 			var surfaceType = !meshInstance.RenderMaterial ? meshInstance.RenderSurfaceType : 
@@ -385,87 +340,76 @@ namespace InternalRealtimeCSG
 		}
 		*/
 
-		private static bool ValidMeshInstance(GeneratedMeshInstance meshInstance)
-		{
-			return meshInstance.IsValid();
-		}
+        private static bool ValidMeshInstance(GeneratedMeshInstance meshInstance) {
+            return meshInstance.IsValid();
+        }
 
-		public static bool HasVisibleMeshRenderer(GeneratedMeshInstance meshInstance)
-		{
-			if (!meshInstance)
-				return false;
-			return meshInstance.RenderSurfaceType == RenderSurfaceType.Normal;
-		}
+        public static bool HasVisibleMeshRenderer(GeneratedMeshInstance meshInstance) {
+            if (!meshInstance)
+                return false;
+            return meshInstance.RenderSurfaceType == RenderSurfaceType.Normal;
+        }
 
-		public static bool HasRuntimeMesh(GeneratedMeshInstance meshInstance)
-		{
-			if (!meshInstance)
-				return false;
-			return	meshInstance.RenderSurfaceType != RenderSurfaceType.Culled &&
+        public static bool HasRuntimeMesh(GeneratedMeshInstance meshInstance) {
+            if (!meshInstance)
+                return false;
+            return meshInstance.RenderSurfaceType != RenderSurfaceType.Culled &&
                     meshInstance.RenderSurfaceType != RenderSurfaceType.ReceiveShadows &&
                     meshInstance.RenderSurfaceType != RenderSurfaceType.CastShadows &&
                     meshInstance.RenderSurfaceType != RenderSurfaceType.Hidden;
-		}
+        }
 
-		public static void UpdateHelperSurfaces()
-		{
-			var models			= InternalCSGModelManager.Models;
-			for (var i = 0; i < models.Length; i++)
-			{
-				var model = models[i];
+        public static void UpdateHelperSurfaces() {
+            var models = InternalCSGModelManager.Models;
+            for (var i = 0; i < models.Length; i++) {
+                var model = models[i];
                 if (!ModelTraits.IsModelEditable(model))
-					continue;
+                    continue;
 
-                if( !model.generatedMeshes )
+                if (!model.generatedMeshes)
                     continue;
-                
-				var container = model.generatedMeshes;
+
+                var container = model.generatedMeshes;
                 if (container.owner != model ||
-					!container.gameObject)
+                    !container.gameObject)
                     continue;
-                
-                if (!container.HasHelperSurfaces)
-                {
+
+                if (!container.HasHelperSurfaces) {
                     if (!container.HasMeshInstances)
                         ValidateGeneratedMeshesDelayed(container);
                     continue;
                 }
 
-				foreach (var meshInstance in container.MeshInstances)
-				{
-					if (!meshInstance)
-					{
+                foreach (var meshInstance in container.MeshInstances) {
+                    if (!meshInstance) {
                         GameObjectExtensions.TryDestroy(meshInstance.gameObject);
-						return;
-					}
-				}
+                        return;
+                    }
+                }
 
 
-				foreach (var helperSurface in container.HelperSurfaces)
-				{
-					var renderSurfaceType = helperSurface.RenderSurfaceType;
+                foreach (var helperSurface in container.HelperSurfaces) {
+                    var renderSurfaceType = helperSurface.RenderSurfaceType;
 
-					if (!helperSurface.SharedMesh ||
-						helperSurface.SharedMesh.vertexCount == 0 ||
-						!ShouldRenderHelperSurface(renderSurfaceType))
-					{
-						if (helperSurface.GameObject)
-							helperSurface.GameObject.SetActive(false);
-						continue;
-					}
+                    if (!helperSurface.SharedMesh ||
+                        helperSurface.SharedMesh.vertexCount == 0 ||
+                        !ShouldRenderHelperSurface(renderSurfaceType)) {
+                        if (helperSurface.GameObject)
+                            helperSurface.GameObject.SetActive(false);
+                        continue;
+                    }
 
-					if (!helperSurface.GameObject || !helperSurface.MeshFilter || !helperSurface.MeshRenderer ||
-						helperSurface.MeshFilter.sharedMesh != helperSurface.SharedMesh)
-						MeshInstanceManager.UpdateHelperSurfaceGameObject(container, helperSurface);
+                    if (!helperSurface.GameObject || !helperSurface.MeshFilter || !helperSurface.MeshRenderer ||
+                        helperSurface.MeshFilter.sharedMesh != helperSurface.SharedMesh)
+                        MeshInstanceManager.UpdateHelperSurfaceGameObject(container, helperSurface);
 
-                    if (!helperSurface.HasGeneratedNormals)
-					{
-						helperSurface.SharedMesh.RecalculateNormals();
-						helperSurface.HasGeneratedNormals = true;
-					}
+                    if (!helperSurface.HasGeneratedNormals) {
+                        helperSurface.SharedMesh.RecalculateNormals();
+                        helperSurface.HasGeneratedNormals = true;
+                    }
 
-					helperSurface.GameObject.SetActive(true);
-					/*
+                    helperSurface.GameObject.SetActive(true);
+                    /*
 
 					if (!showWireframe)
 					{
@@ -485,41 +429,36 @@ namespace InternalRealtimeCSG
 										  castShadows: false,
 										  receiveShadows: false);
 					}*/
-				}
-			}
-		}
+                }
+            }
+        }
 
-		public static UnityEngine.Object[] FindRenderers(CSGModel[] models)
-		{
-			var renderers = new List<UnityEngine.Object>();
-			foreach (var model in models)
-            {
+        public static UnityEngine.Object[] FindRenderers(CSGModel[] models) {
+            var renderers = new List<UnityEngine.Object>();
+            foreach (var model in models) {
                 if (!model || !model.gameObject.activeInHierarchy)
                     continue;
 
                 if (!model.generatedMeshes)
-					continue;
+                    continue;
 
-				foreach (var renderer in model.generatedMeshes.GetComponentsInChildren<MeshRenderer>())
-				{
-					if (!renderer)
-						continue;
+                foreach (var renderer in model.generatedMeshes.GetComponentsInChildren<MeshRenderer>()) {
+                    if (!renderer)
+                        continue;
 
-					var type = MaterialUtility.GetMaterialSurfaceType(renderer.sharedMaterial);
-					if (type == RenderSurfaceType.Normal)
-						continue;
+                    var type = MaterialUtility.GetMaterialSurfaceType(renderer.sharedMaterial);
+                    if (type == RenderSurfaceType.Normal)
+                        continue;
 
-					renderers.Add(renderer);
-				}
-			}
-			return renderers.ToArray();
-		}
+                    renderers.Add(renderer);
+                }
+            }
+            return renderers.ToArray();
+        }
 
-        internal static void ResetScene(Scene scene)
-        {
-			var meshInstances = SceneQueryUtility.GetAllComponentsInScene<GeneratedMeshInstance>(scene);
-			for (int m = 0; m < meshInstances.Count; m++)
-            {
+        internal static void ResetScene(Scene scene) {
+            var meshInstances = SceneQueryUtility.GetAllComponentsInScene<GeneratedMeshInstance>(scene);
+            for (int m = 0; m < meshInstances.Count; m++) {
                 if (!meshInstances[m])
                     continue;
 
@@ -530,90 +469,75 @@ namespace InternalRealtimeCSG
                     continue;
                 model.generatedMeshes = null;
                 meshInstances[m].hideFlags = HideFlags.None;
-				var gameObject = meshInstances[m].gameObject;
+                var gameObject = meshInstances[m].gameObject;
                 GameObjectExtensions.SanitizeGameObject(gameObject);
                 GameObjectExtensions.TryDestroy(gameObject);
-			}
+            }
         }
 
-        internal static void Reset()
-		{
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return;
+        internal static void Reset() {
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+                return;
 
-			for (var sceneIndex = 0; sceneIndex < SceneManager.sceneCount; sceneIndex++)
-			{
-				var scene = SceneManager.GetSceneAt(sceneIndex);
-				if (!scene.isLoaded)
-					continue;
+            for (var sceneIndex = 0; sceneIndex < SceneManager.sceneCount; sceneIndex++) {
+                var scene = SceneManager.GetSceneAt(sceneIndex);
+                if (!scene.isLoaded)
+                    continue;
                 ResetScene(scene);
             }
 
 #if UNITY_2018_4_OR_NEWER
-            if (CSGPrefabUtility.AreInPrefabMode())
-            {
+            if (CSGPrefabUtility.AreInPrefabMode()) {
                 var currentPrefabStage = PrefabStageUtility.GetCurrentPrefabStage();
                 ResetScene(currentPrefabStage.scene);
             }
 #endif
         }
 
-		public static RenderSurfaceType GetSurfaceType(GeneratedMeshDescription meshDescription, ModelSettingsFlags modelSettings)
-		{
-			if (meshDescription.meshQuery.LayerQuery == LayerUsageFlags.Culled) return RenderSurfaceType.Culled;
-			switch (meshDescription.meshQuery.LayerParameterIndex)
-			{
-				case LayerParameterIndex.LayerParameter1:
-				{
-					switch (meshDescription.meshQuery.LayerQuery)
-					{
-						case LayerUsageFlags.RenderReceiveCastShadows:
-						case LayerUsageFlags.RenderReceiveShadows:
-						case LayerUsageFlags.RenderCastShadows:
-						case LayerUsageFlags.Renderable:										return RenderSurfaceType.Normal;
-						case LayerUsageFlags.ReceiveShadows:									return RenderSurfaceType.Hidden;
-						case (LayerUsageFlags.CastShadows | LayerUsageFlags.ReceiveShadows):
-						case LayerUsageFlags.CastShadows:										return RenderSurfaceType.ShadowOnly; 
-						default:
-						return RenderSurfaceType.Culled;
-					}
-				}
-				case LayerParameterIndex.LayerParameter2:
-				{
-					if ((modelSettings & ModelSettingsFlags.IsTrigger) != 0)
-					{
-						return RenderSurfaceType.Trigger;
-					} else
-					{
-						return RenderSurfaceType.Collider;
-					}
-				}
-				case LayerParameterIndex.None:
-				{
-					switch (meshDescription.meshQuery.LayerQuery)
-					{
-						case LayerUsageFlags.None:				return RenderSurfaceType.Hidden;
-						case LayerUsageFlags.CastShadows:		return RenderSurfaceType.CastShadows;
-						case LayerUsageFlags.ReceiveShadows:	return RenderSurfaceType.ReceiveShadows;
-						case LayerUsageFlags.Collidable:
-						{
-							if ((modelSettings & ModelSettingsFlags.IsTrigger) != 0)
-							{
-								return RenderSurfaceType.Trigger;
-							} else
-								return RenderSurfaceType.Collider;
-						}
-						default:
-						case LayerUsageFlags.Culled:
-						return RenderSurfaceType.Culled;
-					}
-				}
-			}
-			return RenderSurfaceType.Normal;
-		}
+        public static RenderSurfaceType GetSurfaceType(GeneratedMeshDescription meshDescription, ModelSettingsFlags modelSettings) {
+            if (meshDescription.meshQuery.LayerQuery == LayerUsageFlags.Culled) return RenderSurfaceType.Culled;
+            switch (meshDescription.meshQuery.LayerParameterIndex) {
+                case LayerParameterIndex.LayerParameter1: {
+                        switch (meshDescription.meshQuery.LayerQuery) {
+                            case LayerUsageFlags.RenderReceiveCastShadows:
+                            case LayerUsageFlags.RenderReceiveShadows:
+                            case LayerUsageFlags.RenderCastShadows:
+                            case LayerUsageFlags.Renderable: return RenderSurfaceType.Normal;
+                            case LayerUsageFlags.ReceiveShadows: return RenderSurfaceType.Hidden;
+                            case (LayerUsageFlags.CastShadows | LayerUsageFlags.ReceiveShadows):
+                            case LayerUsageFlags.CastShadows: return RenderSurfaceType.ShadowOnly;
+                            default:
+                                return RenderSurfaceType.Culled;
+                        }
+                    }
+                case LayerParameterIndex.LayerParameter2: {
+                        if ((modelSettings & ModelSettingsFlags.IsTrigger) != 0) {
+                            return RenderSurfaceType.Trigger;
+                        } else {
+                            return RenderSurfaceType.Collider;
+                        }
+                    }
+                case LayerParameterIndex.None: {
+                        switch (meshDescription.meshQuery.LayerQuery) {
+                            case LayerUsageFlags.None: return RenderSurfaceType.Hidden;
+                            case LayerUsageFlags.CastShadows: return RenderSurfaceType.CastShadows;
+                            case LayerUsageFlags.ReceiveShadows: return RenderSurfaceType.ReceiveShadows;
+                            case LayerUsageFlags.Collidable: {
+                                    if ((modelSettings & ModelSettingsFlags.IsTrigger) != 0) {
+                                        return RenderSurfaceType.Trigger;
+                                    } else
+                                        return RenderSurfaceType.Collider;
+                                }
+                            default:
+                            case LayerUsageFlags.Culled:
+                                return RenderSurfaceType.Culled;
+                        }
+                    }
+            }
+            return RenderSurfaceType.Normal;
+        }
 
-        static GeneratedMeshInstance SafeGetGeneratedMeshInstance(GameObject meshInstanceGameObject)
-        {
+        static GeneratedMeshInstance SafeGetGeneratedMeshInstance(GameObject meshInstanceGameObject) {
             GeneratedMeshInstance instance;
             if (meshInstanceGameObject.TryGetComponent(out instance))
                 return instance;
@@ -621,45 +545,37 @@ namespace InternalRealtimeCSG
             return meshInstanceGameObject.AddComponent<GeneratedMeshInstance>();
         }
 
-        static void RemoveComponent<T>(GameObject gameObject) where T : UnityEngine.Component
-        {
+        static void RemoveComponent<T>(GameObject gameObject) where T : UnityEngine.Component {
             T component;
             if (!gameObject.TryGetComponent(out component))
                 return;
             UnityEngine.Object.DestroyImmediate(component);
         }
 
-        static void RemoveMeshInstanceComponents(GameObject gameObject, GeneratedMeshDescription meshDescription)
-        {
+        static void RemoveMeshInstanceComponents(GameObject gameObject, GeneratedMeshDescription meshDescription) {
             var parameterIndex = meshDescription.meshQuery.LayerParameterIndex;
-            if (parameterIndex != LayerParameterIndex.PhysicsMaterial)
-            {
+            if (parameterIndex != LayerParameterIndex.PhysicsMaterial) {
                 RemoveComponent<MeshCollider>(gameObject);
             }
-            if (parameterIndex != LayerParameterIndex.RenderMaterial)
-            {
+            if (parameterIndex != LayerParameterIndex.RenderMaterial) {
                 RemoveComponent<MeshFilter>(gameObject);
                 RemoveComponent<MeshRenderer>(gameObject);
             }
         }
 
-        static void GetGameObjectAndGeneratedMeshInstance(List<GameObject> unusedInstances, GeneratedMeshDescription meshDescription, out GameObject meshInstanceGameObject, out GeneratedMeshInstance meshInstance)
-        {
-			if (unusedInstances == null ||
-                unusedInstances.Count == 0)
-            {
+        static void GetGameObjectAndGeneratedMeshInstance(List<GameObject> unusedInstances, GeneratedMeshDescription meshDescription, out GameObject meshInstanceGameObject, out GeneratedMeshInstance meshInstance) {
+            if (unusedInstances == null ||
+                unusedInstances.Count == 0) {
                 meshInstanceGameObject = new GameObject();
-				meshInstance = meshInstanceGameObject.AddComponent<GeneratedMeshInstance>();
+                meshInstance = meshInstanceGameObject.AddComponent<GeneratedMeshInstance>();
                 return;
-			}
+            }
 
-            for (int i = 0; i < unusedInstances.Count; i++)
-            {
+            for (int i = 0; i < unusedInstances.Count; i++) {
                 GeneratedMeshInstance instance;
                 if (!unusedInstances[i].TryGetComponent(out instance))
                     continue;
-                if (meshDescription.meshQuery.LayerParameterIndex == instance.MeshDescription.meshQuery.LayerParameterIndex)
-                {
+                if (meshDescription.meshQuery.LayerParameterIndex == instance.MeshDescription.meshQuery.LayerParameterIndex) {
                     meshInstanceGameObject = unusedInstances[i];
                     meshInstanceGameObject.hideFlags = HideFlags.None;
                     unusedInstances.RemoveAt(i);
@@ -676,131 +592,121 @@ namespace InternalRealtimeCSG
         }
 
 
-		public static GeneratedMeshInstance CreateMeshInstance(GeneratedMeshes generatedMeshes, GeneratedMeshDescription meshDescription, ModelSettingsFlags modelSettings, RenderSurfaceType renderSurfaceType, List<GameObject> unusedInstances)
-		{
+        public static GeneratedMeshInstance CreateMeshInstance(GeneratedMeshes generatedMeshes, GeneratedMeshDescription meshDescription, ModelSettingsFlags modelSettings, RenderSurfaceType renderSurfaceType, List<GameObject> unusedInstances) {
             if (!generatedMeshes || !generatedMeshes.owner)
                 return null;
 
 
-			var generatedMeshesTransform = generatedMeshes.transform;
-			GameObject meshInstanceGameObject = null;
-			GeneratedMeshInstance meshInstance = null;
+            var generatedMeshesTransform = generatedMeshes.transform;
+            GameObject meshInstanceGameObject = null;
+            GeneratedMeshInstance meshInstance = null;
 
             GetGameObjectAndGeneratedMeshInstance(unusedInstances, meshDescription, out meshInstanceGameObject, out meshInstance);
 
             meshInstance.Reset();
             meshInstanceGameObject.SetActive(false);
-			meshInstanceGameObject.transform.SetParent(generatedMeshesTransform, false);
-			meshInstanceGameObject.transform.localPosition	= MathConstants.zeroVector3;
-			meshInstanceGameObject.transform.localRotation	= MathConstants.identityQuaternion;
-			meshInstanceGameObject.transform.localScale		= MathConstants.oneVector3;
+            meshInstanceGameObject.transform.SetParent(generatedMeshesTransform, false);
+            meshInstanceGameObject.transform.localPosition = MathConstants.zeroVector3;
+            meshInstanceGameObject.transform.localRotation = MathConstants.identityQuaternion;
+            meshInstanceGameObject.transform.localScale = MathConstants.oneVector3;
 
 
             var containerStaticFlags = GameObjectUtility.GetStaticEditorFlags(generatedMeshes.owner.gameObject);
-			GameObjectUtility.SetStaticEditorFlags(meshInstanceGameObject, containerStaticFlags);
+            GameObjectUtility.SetStaticEditorFlags(meshInstanceGameObject, containerStaticFlags);
 
 
-			Material renderMaterial = null;
-			PhysicsMaterial physicsMaterial = null;
-			if (meshDescription.surfaceParameter != 0)
-			{
-				var obj = EditorUtility.InstanceIDToObject(meshDescription.surfaceParameter);
-				if (obj)
-				{
-					switch (meshDescription.meshQuery.LayerParameterIndex)
-					{
-						case LayerParameterIndex.RenderMaterial:  { renderMaterial  = obj as Material; break; }
-						case LayerParameterIndex.PhysicsMaterial: { physicsMaterial = obj as PhysicsMaterial; break; }
-					}
-				}
-			}
+            Material renderMaterial = null;
+            PhysicsMaterial physicsMaterial = null;
+            if (meshDescription.surfaceParameter != 0) {
+                var obj = EditorUtility.InstanceIDToObject(meshDescription.surfaceParameter);
+                if (obj) {
+                    switch (meshDescription.meshQuery.LayerParameterIndex) {
+                        case LayerParameterIndex.RenderMaterial: { renderMaterial = obj as Material; break; }
+                        case LayerParameterIndex.PhysicsMaterial: { physicsMaterial = obj as PhysicsMaterial; break; }
+                    }
+                }
+            }
 
-			meshInstance.MeshDescription = meshDescription;
+            meshInstance.MeshDescription = meshDescription;
 
-			// Our mesh has not been initialized yet, so make sure we reflect that fact
-			meshInstance.MeshDescription.geometryHashValue = 0;
-			meshInstance.MeshDescription.surfaceHashValue = 0;
-			meshInstance.MeshDescription.vertexCount = 0;
-			meshInstance.MeshDescription.indexCount = 0;
+            // Our mesh has not been initialized yet, so make sure we reflect that fact
+            meshInstance.MeshDescription.geometryHashValue = 0;
+            meshInstance.MeshDescription.surfaceHashValue = 0;
+            meshInstance.MeshDescription.vertexCount = 0;
+            meshInstance.MeshDescription.indexCount = 0;
 
-			meshInstance.RenderMaterial = renderMaterial;
-			meshInstance.PhysicsMaterial = physicsMaterial;
-			meshInstance.RenderSurfaceType = renderSurfaceType;
+            meshInstance.RenderMaterial = renderMaterial;
+            meshInstance.PhysicsMaterial = physicsMaterial;
+            meshInstance.RenderSurfaceType = renderSurfaceType;
 
-			meshInstanceGameObject.SetActive(true);
+            meshInstanceGameObject.SetActive(true);
 
-			Initialize(generatedMeshes, meshInstance);
+            Initialize(generatedMeshes, meshInstance);
             return meshInstance;
-		}
+        }
 
-		public static void UpdateHelperSurfaceGameObject(GeneratedMeshes container, HelperSurfaceDescription helperSurfaceDescription)
-        {
-			if (!helperSurfaceDescription.GameObject ||
-				!helperSurfaceDescription.MeshFilter ||
-				!helperSurfaceDescription.MeshRenderer)
-			{ 
-				if (helperSurfaceDescription.GameObject) GameObjectExtensions.Destroy(helperSurfaceDescription.GameObject);
+        public static void UpdateHelperSurfaceGameObject(GeneratedMeshes container, HelperSurfaceDescription helperSurfaceDescription) {
+            if (!helperSurfaceDescription.GameObject ||
+                !helperSurfaceDescription.MeshFilter ||
+                !helperSurfaceDescription.MeshRenderer) {
+                if (helperSurfaceDescription.GameObject) GameObjectExtensions.Destroy(helperSurfaceDescription.GameObject);
 
-				helperSurfaceDescription.GameObject = new GameObject(HelperMeshInstanceName);
-				helperSurfaceDescription.GameObject.SetActive(false);
-				helperSurfaceDescription.GameObject.transform.SetParent(container.transform, true);
-				helperSurfaceDescription.GameObject.transform.localPosition = Vector3.zero;
-				helperSurfaceDescription.GameObject.transform.localRotation = Quaternion.identity;
-				helperSurfaceDescription.GameObject.transform.localScale = Vector3.one;
-				helperSurfaceDescription.GameObject.hideFlags = HideFlags.DontSave;
-				helperSurfaceDescription.MeshFilter		= helperSurfaceDescription.GameObject.AddComponent<MeshFilter>();
-				helperSurfaceDescription.MeshRenderer	= helperSurfaceDescription.GameObject.AddComponent<MeshRenderer>();
-			}
-			if (helperSurfaceDescription.MeshFilter.sharedMesh != helperSurfaceDescription.SharedMesh)
-				helperSurfaceDescription.MeshFilter.sharedMesh = helperSurfaceDescription.SharedMesh;
+                helperSurfaceDescription.GameObject = new GameObject(HelperMeshInstanceName);
+                helperSurfaceDescription.GameObject.SetActive(false);
+                helperSurfaceDescription.GameObject.transform.SetParent(container.transform, true);
+                helperSurfaceDescription.GameObject.transform.localPosition = Vector3.zero;
+                helperSurfaceDescription.GameObject.transform.localRotation = Quaternion.identity;
+                helperSurfaceDescription.GameObject.transform.localScale = Vector3.one;
+                helperSurfaceDescription.GameObject.hideFlags = HideFlags.DontSave;
+                helperSurfaceDescription.MeshFilter = helperSurfaceDescription.GameObject.AddComponent<MeshFilter>();
+                helperSurfaceDescription.MeshRenderer = helperSurfaceDescription.GameObject.AddComponent<MeshRenderer>();
+            }
+            if (helperSurfaceDescription.MeshFilter.sharedMesh != helperSurfaceDescription.SharedMesh)
+                helperSurfaceDescription.MeshFilter.sharedMesh = helperSurfaceDescription.SharedMesh;
 
-			var sharedMaterial = MaterialUtility.GetSurfaceMaterial(helperSurfaceDescription.RenderSurfaceType);
-			if (helperSurfaceDescription.MeshRenderer.sharedMaterial != sharedMaterial)
-				helperSurfaceDescription.MeshRenderer.sharedMaterial = sharedMaterial;
-		}
+            var sharedMaterial = MaterialUtility.GetSurfaceMaterial(helperSurfaceDescription.RenderSurfaceType);
+            if (helperSurfaceDescription.MeshRenderer.sharedMaterial != sharedMaterial)
+                helperSurfaceDescription.MeshRenderer.sharedMaterial = sharedMaterial;
+        }
 
-		public static HelperSurfaceDescription CreateHelperSurfaceDescription(GeneratedMeshes container, ModelSettingsFlags modelSettings, GeneratedMeshDescription meshDescription, RenderSurfaceType renderSurfaceType)
-		{
-			var instance = new HelperSurfaceDescription
-			{
-				RenderSurfaceType = renderSurfaceType,
-				MeshDescription   = meshDescription
-			};
+        public static HelperSurfaceDescription CreateHelperSurfaceDescription(GeneratedMeshes container, ModelSettingsFlags modelSettings, GeneratedMeshDescription meshDescription, RenderSurfaceType renderSurfaceType) {
+            var instance = new HelperSurfaceDescription
+            {
+                RenderSurfaceType = renderSurfaceType,
+                MeshDescription = meshDescription
+            };
 
-			// Our mesh has not been initialized yet, so make sure we reflect that fact
-			instance.MeshDescription.geometryHashValue	= 0;
-			instance.MeshDescription.surfaceHashValue	= 0;
-			instance.MeshDescription.vertexCount		= 0;
-			instance.MeshDescription.indexCount			= 0;
+            // Our mesh has not been initialized yet, so make sure we reflect that fact
+            instance.MeshDescription.geometryHashValue = 0;
+            instance.MeshDescription.surfaceHashValue = 0;
+            instance.MeshDescription.vertexCount = 0;
+            instance.MeshDescription.indexCount = 0;
 
-			Initialize(container, instance);
-			return instance;
-		}
+            Initialize(container, instance);
+            return instance;
+        }
 
-		internal static void ClearOrCreateMesh(string baseName, bool editorOnly, ref bool hasGeneratedNormals, ref Mesh sharedMesh)
-        {
+        internal static void ClearOrCreateMesh(string baseName, bool editorOnly, ref bool hasGeneratedNormals, ref Mesh sharedMesh) {
             bool recreateMeshes = CSGPrefabUtility.IsPartOfAsset(sharedMesh);
 
             hasGeneratedNormals = false;
-			if (!recreateMeshes &&sharedMesh)
-			{
-				if (!CSGProjectSettings.Instance.SaveMeshesInSceneFiles)
-					sharedMesh.hideFlags |= HideFlags.DontSaveInEditor;
-				sharedMesh.Clear(keepVertexLayout: true);
-				return;
-			}
-			
-			sharedMesh = new Mesh();
-			sharedMesh.name = $"<{baseName} generated {sharedMesh.GetInstanceID()}>";
-			sharedMesh.MarkDynamic();
+            if (!recreateMeshes && sharedMesh) {
+                if (!CSGProjectSettings.Instance.SaveMeshesInSceneFiles)
+                    sharedMesh.hideFlags |= HideFlags.DontSaveInEditor;
+                sharedMesh.Clear(keepVertexLayout: true);
+                return;
+            }
+
+            sharedMesh = new Mesh();
+            sharedMesh.name = $"<{baseName} generated {sharedMesh.GetInstanceID()}>";
+            sharedMesh.MarkDynamic();
             if (editorOnly)
                 sharedMesh.hideFlags = HideFlags.DontSaveInBuild;
-			if (!CSGProjectSettings.Instance.SaveMeshesInSceneFiles)
-				sharedMesh.hideFlags |= HideFlags.DontSaveInEditor;
+            if (!CSGProjectSettings.Instance.SaveMeshesInSceneFiles)
+                sharedMesh.hideFlags |= HideFlags.DontSaveInEditor;
         }
 
-        public static bool UsesLightmapUVs(CSGModel model)
-        {
+        public static bool UsesLightmapUVs(CSGModel model) {
             var staticFlags = GameObjectUtility.GetStaticEditorFlags(model.gameObject);
 #if UNITY_2019_2_OR_NEWER
             if ((staticFlags & StaticEditorFlags.ContributeGI) != StaticEditorFlags.ContributeGI)
@@ -812,312 +718,281 @@ namespace InternalRealtimeCSG
             return true;
         }
 
-        public static bool NeedToGenerateLightmapUVsForModel(CSGModel model)
-        {
+        public static bool NeedToGenerateLightmapUVsForModel(CSGModel model) {
             if (!ModelTraits.IsModelEditable(model))
-				return false;
+                return false;
 
-			if (!model.generatedMeshes)
-				return false;
+            if (!model.generatedMeshes)
+                return false;
 
-			var container = model.generatedMeshes;
-			if (!container || container.owner != model)
-				return false;
+            var container = model.generatedMeshes;
+            if (!container || container.owner != model)
+                return false;
 
-			if (!container.HasMeshInstances)
-				return false;
+            if (!container.HasMeshInstances)
+                return false;
 
             if (!UsesLightmapUVs(model))
                 return false;
 
-            foreach (var instance in container.MeshInstances)
-			{
-				if (!instance)
-					continue;
+            foreach (var instance in container.MeshInstances) {
+                if (!instance)
+                    continue;
 
                 if (NeedToGenerateLightmapUVsForInstance(instance))
                     return true;
-			}
-			return false;
-		}
+            }
+            return false;
+        }
 
-		public static void GenerateLightmapUVsForModel(CSGModel model)
-        {
+        public static void GenerateLightmapUVsForModel(CSGModel model) {
             if (!ModelTraits.IsModelEditable(model))
                 return;
 
             if (!model.generatedMeshes)
-				return;
+                return;
 
-			var container = model.generatedMeshes;
-			if (!container || !container.owner)
-				return;
+            var container = model.generatedMeshes;
+            if (!container || !container.owner)
+                return;
 
             if (!container.HasMeshInstances)
-				return;
+                return;
 
             var uvGenerationSettings = new UnityEditor.UnwrapParam
-			{
-				angleError = Mathf.Clamp(model.angleError, CSGModel.MinAngleError, CSGModel.MaxAngleError),
-				areaError  = Mathf.Clamp(model.areaError, CSGModel.MinAreaError, CSGModel.MaxAreaError),
-				hardAngle  = model.hardAngle,
-				packMargin = model.packMargin / 1024.0f
-			};
+            {
+                angleError = Mathf.Clamp(model.angleError, CSGModel.MinAngleError, CSGModel.MaxAngleError),
+                areaError = Mathf.Clamp(model.areaError, CSGModel.MinAreaError, CSGModel.MaxAreaError),
+                hardAngle = model.hardAngle,
+                packMargin = model.packMargin / 1024.0f
+            };
 
-            foreach (var instance in container.MeshInstances)
-			{
+            foreach (var instance in container.MeshInstances) {
                 if (!instance)
                     continue;
-                if (!instance.SharedMesh)
-                {
+                if (!instance.SharedMesh) {
                     instance.FindMissingSharedMesh();
                     if (!instance.SharedMesh)
                         continue;
                 }
 
                 GenerateLightmapUVsForInstance(instance, model, uvGenerationSettings);
-			}
-		}
+            }
+        }
 
-		private static void GenerateLightmapUVsForInstance(GeneratedMeshInstance instance, CSGModel model, UnwrapParam param)
-        {
+        private static void GenerateLightmapUVsForInstance(GeneratedMeshInstance instance, CSGModel model, UnwrapParam param) {
             var meshRendererComponent = instance.CachedMeshRenderer;
-			if (!meshRendererComponent)
-			{
-				var gameObject = instance.gameObject;
-				meshRendererComponent = gameObject.GetComponent<MeshRenderer>();
-				instance.CachedMeshRendererSO = null;
-			}
+            if (!meshRendererComponent) {
+                var gameObject = instance.gameObject;
+                meshRendererComponent = gameObject.GetComponent<MeshRenderer>();
+            }
 
-			if (!meshRendererComponent)
-				return;
+            if (!meshRendererComponent)
+                return;
 
-			meshRendererComponent.realtimeLightmapIndex = -1;
-			meshRendererComponent.lightmapIndex = -1;
-			
-			var oldVertices		= instance.SharedMesh.vertices;
-			if (oldVertices.Length == 0)
-				return;
+            meshRendererComponent.realtimeLightmapIndex = -1;
+            meshRendererComponent.lightmapIndex = -1;
+
+            var oldVertices = instance.SharedMesh.vertices;
+            if (oldVertices.Length == 0)
+                return;
 
             var tempMesh = instance.SharedMesh.Clone();
-			instance.SharedMesh = tempMesh;
+            instance.SharedMesh = tempMesh;
 
             UnityEngine.Object pingObject = model;
             if (model.ShowGeneratedMeshes) pingObject = instance;
-            Debug.Log("Generating lightmap UVs (by Unity) for the mesh " + instance.name + " of the Model named \"" + model.name +"\"\n", pingObject);
-			//var optimizeTime = EditorApplication.timeSinceStartup;
-			//MeshUtility.Optimize(instance.SharedMesh);
-			//optimizeTime = EditorApplication.timeSinceStartup - optimizeTime;
+            Debug.Log("Generating lightmap UVs (by Unity) for the mesh " + instance.name + " of the Model named \"" + model.name + "\"\n", pingObject);
+            //var optimizeTime = EditorApplication.timeSinceStartup;
+            //MeshUtility.Optimize(instance.SharedMesh);
+            //optimizeTime = EditorApplication.timeSinceStartup - optimizeTime;
 
-			var lightmapGenerationTime = EditorApplication.timeSinceStartup;
+            var lightmapGenerationTime = EditorApplication.timeSinceStartup;
             MeshUtility.Optimize(instance.SharedMesh);
             Unwrapping.GenerateSecondaryUVSet(instance.SharedMesh, param);
-			lightmapGenerationTime = EditorApplication.timeSinceStartup - lightmapGenerationTime;
-			
-			Debug.Log(//"\tMesh optimizing in " + (optimizeTime * 1000) + " ms\n"+
-					  "\tUV generation in " + (lightmapGenerationTime* 1000) + " ms\n", model);
+            lightmapGenerationTime = EditorApplication.timeSinceStartup - lightmapGenerationTime;
 
-			EditorSceneManager.MarkSceneDirty(instance.gameObject.scene);
-			instance.LightingHashValue = instance.MeshDescription.geometryHashValue;
-			instance.HasUV2 = true;
+            Debug.Log(//"\tMesh optimizing in " + (optimizeTime * 1000) + " ms\n"+
+                      "\tUV generation in " + (lightmapGenerationTime * 1000) + " ms\n", model);
+
+            EditorSceneManager.MarkSceneDirty(instance.gameObject.scene);
+            instance.LightingHashValue = instance.MeshDescription.geometryHashValue;
+            instance.HasUV2 = true;
         }
-		
-		private static bool NeedToGenerateLightmapUVsForInstance(GeneratedMeshInstance instance)
-		{
-			return !instance.HasUV2 && instance.RenderSurfaceType == RenderSurfaceType.Normal;
-		}
 
-		public static bool NeedToStitchCracksForModel(CSGModel model)
-		{
-			if (!ModelTraits.IsModelEditable(model))
-				return false;
+        private static bool NeedToGenerateLightmapUVsForInstance(GeneratedMeshInstance instance) {
+            return !instance.HasUV2 && instance.RenderSurfaceType == RenderSurfaceType.Normal;
+        }
 
-			if (!model.generatedMeshes)
-				return false;
+        public static bool NeedToStitchCracksForModel(CSGModel model) {
+            if (!ModelTraits.IsModelEditable(model))
+                return false;
 
-			var container = model.generatedMeshes;
-			if (!container || container.owner != model)
-				return false;
+            if (!model.generatedMeshes)
+                return false;
 
-			foreach (var instance in container.MeshInstances)
-			{
-				if (!instance)
-					continue;
+            var container = model.generatedMeshes;
+            if (!container || container.owner != model)
+                return false;
 
-				if (NeedToStitchCracksForInstance(instance))
-					return true;
-			}
-			return false;
-		}
+            foreach (var instance in container.MeshInstances) {
+                if (!instance)
+                    continue;
 
-		public static void StitchCracksForModel(CSGModel model)
-		{
-			if (!ModelTraits.IsModelEditable(model))
-				return;
+                if (NeedToStitchCracksForInstance(instance))
+                    return true;
+            }
+            return false;
+        }
 
-			if (!model.generatedMeshes)
-				return;
+        public static void StitchCracksForModel(CSGModel model) {
+            if (!ModelTraits.IsModelEditable(model))
+                return;
 
-			var container = model.generatedMeshes;
-			if (!container || !container.owner)
-				return;
+            if (!model.generatedMeshes)
+                return;
 
-			if (!container.HasMeshInstances)
-				return;
+            var container = model.generatedMeshes;
+            if (!container || !container.owner)
+                return;
 
-			foreach (var instance in container.MeshInstances)
-			{
-				if (!instance)
-					continue;
-				if (!instance.SharedMesh)
-					instance.FindMissingSharedMesh();
-			}
+            if (!container.HasMeshInstances)
+                return;
 
-			foreach (var grouping in from x in container.MeshInstances
-			         where x.SharedMesh != null && x.SharedMesh.vertexCount > 0
-			         group x by x.RenderSurfaceType == RenderSurfaceType.Collider)
-			{
-				var meshes = new List<Mesh>();
-				foreach (var instance in grouping)
-				{
-					instance.SharedMesh = instance.SharedMesh.Clone();
-					meshes.Add(instance.SharedMesh);
-					instance.CracksSolverCancellation?.Invoke();
-				}
+            foreach (var instance in container.MeshInstances) {
+                if (!instance)
+                    continue;
+                if (!instance.SharedMesh)
+                    instance.FindMissingSharedMesh();
+            }
 
-				if (meshes.Count == 0)
-					continue;
+            foreach (var grouping in from x in container.MeshInstances
+                                     where x.SharedMesh != null && x.SharedMesh.vertexCount > 0
+                                     group x by x.RenderSurfaceType == RenderSurfaceType.Collider) {
+                var meshes = new List<Mesh>();
+                foreach (var instance in grouping) {
+                    instance.SharedMesh = instance.SharedMesh.Clone();
+                    meshes.Add(instance.SharedMesh);
+                    instance.CracksSolverCancellation?.Invoke();
+                }
 
-				var tokenSource = new CancellationTokenSource();
+                if (meshes.Count == 0)
+                    continue;
 
-				foreach (var instance in grouping)
-				{
-					instance.CracksSolverCancellation += () =>
-					{
-						tokenSource.Cancel();
-						instance.CracksSolverCancellation = null!;
-					};
-				}
+                var tokenSource = new CancellationTokenSource();
 
-				string progressName = $"Stitching {container.name}'s {(grouping.Key ? "Colliders" : "Meshes")}";
-				var scenes = grouping.Select(x => x.gameObject.scene).ToArray();
-				CracksStitching.RunAsync(meshes, CracksStitching.DefaultMaxDist, null, tokenSource.Token, scenes, progressName);
+                foreach (var instance in grouping) {
+                    instance.CracksSolverCancellation += () => {
+                        tokenSource.Cancel();
+                        instance.CracksSolverCancellation = null!;
+                    };
+                }
 
-				foreach (var instance in grouping)
-				{
-					instance.CracksHashValue = instance.MeshDescription.geometryHashValue;
-					instance.HasNoCracks = true;
-				}
-			}
-		}
+                string progressName = $"Stitching {container.name}'s {(grouping.Key ? "Colliders" : "Meshes")}";
+                var scenes = grouping.Select(x => x.gameObject.scene).ToArray();
+                CracksStitching.RunAsync(meshes, CracksStitching.DefaultMaxDist, null, tokenSource.Token, scenes, progressName);
 
-		private static bool NeedToStitchCracksForInstance(GeneratedMeshInstance instance)
-		{
-			return !instance.HasNoCracks;
-		}
+                foreach (var instance in grouping) {
+                    instance.CracksHashValue = instance.MeshDescription.geometryHashValue;
+                    instance.HasNoCracks = true;
+                }
+            }
+        }
 
-		public static void ClearCrackStitching(GeneratedMeshInstance instance)
-		{
-			instance.CracksHashValue = 0;
-			instance.HasNoCracks = false;
-			instance.CracksSolverCancellation?.Invoke();
-		}
+        private static bool NeedToStitchCracksForInstance(GeneratedMeshInstance instance) {
+            return !instance.HasNoCracks;
+        }
 
-		private static bool AreBoundsEmpty(GeneratedMeshInstance instance)
-		{
-			return
-				Mathf.Abs(instance.SharedMesh.bounds.size.x) <= MathConstants.EqualityEpsilon ||
-				Mathf.Abs(instance.SharedMesh.bounds.size.y) <= MathConstants.EqualityEpsilon ||
-				Mathf.Abs(instance.SharedMesh.bounds.size.z) <= MathConstants.EqualityEpsilon;
-		}
+        public static void ClearCrackStitching(GeneratedMeshInstance instance) {
+            instance.CracksHashValue = 0;
+            instance.HasNoCracks = false;
+            instance.CracksSolverCancellation?.Invoke();
+        }
 
-		private static bool NeedCollider(RenderSurfaceType surfaceType)
-		{
-			return surfaceType == RenderSurfaceType.Collider || surfaceType == RenderSurfaceType.Trigger;
-		}
+        private static bool AreBoundsEmpty(GeneratedMeshInstance instance) {
+            return
+                Mathf.Abs(instance.SharedMesh.bounds.size.x) <= MathConstants.EqualityEpsilon ||
+                Mathf.Abs(instance.SharedMesh.bounds.size.y) <= MathConstants.EqualityEpsilon ||
+                Mathf.Abs(instance.SharedMesh.bounds.size.z) <= MathConstants.EqualityEpsilon;
+        }
 
-		private static bool NeedMeshRenderer(RenderSurfaceType renderSurfaceType)
-        {
+        private static bool NeedCollider(RenderSurfaceType surfaceType) {
+            return surfaceType == RenderSurfaceType.Collider || surfaceType == RenderSurfaceType.Trigger;
+        }
+
+        private static bool NeedMeshRenderer(RenderSurfaceType renderSurfaceType) {
             return renderSurfaceType == RenderSurfaceType.Normal || renderSurfaceType == RenderSurfaceType.ShadowOnly;
         }
 
-		static StaticEditorFlags FilterStaticEditorFlags(StaticEditorFlags modelStaticFlags, RenderSurfaceType renderSurfaceType)
-		{
+        static StaticEditorFlags FilterStaticEditorFlags(StaticEditorFlags modelStaticFlags, RenderSurfaceType renderSurfaceType) {
             if (!NeedMeshRenderer(renderSurfaceType))
-	            return modelStaticFlags;
+                return modelStaticFlags;
 
-			var meshStaticFlags = modelStaticFlags;
-			var walkable =	renderSurfaceType != RenderSurfaceType.Hidden &&
-							renderSurfaceType != RenderSurfaceType.ShadowOnly &&
-							renderSurfaceType != RenderSurfaceType.Culled &&
-							renderSurfaceType != RenderSurfaceType.Trigger;
-			if (!walkable)	meshStaticFlags = meshStaticFlags & ~StaticEditorFlags.NavigationStatic;
+            var meshStaticFlags = modelStaticFlags;
+            var walkable = renderSurfaceType != RenderSurfaceType.Hidden &&
+                            renderSurfaceType != RenderSurfaceType.ShadowOnly &&
+                            renderSurfaceType != RenderSurfaceType.Culled &&
+                            renderSurfaceType != RenderSurfaceType.Trigger;
+            if (!walkable) meshStaticFlags = meshStaticFlags & ~StaticEditorFlags.NavigationStatic;
 
 
             // This fixes a bug in 2018.3 where it tries to generate lightmaps for ShadowOnly surfaces ..
             // .. but then rage quits because it doesn't have any normals
 #if UNITY_2019_2_OR_NEWER
-			if (renderSurfaceType == RenderSurfaceType.ShadowOnly)
-				meshStaticFlags = meshStaticFlags & ~(StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
+            if (renderSurfaceType == RenderSurfaceType.ShadowOnly)
+                meshStaticFlags = meshStaticFlags & ~(StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
 #else
             if (renderSurfaceType == RenderSurfaceType.ShadowOnly)
                 meshStaticFlags = meshStaticFlags & ~(StaticEditorFlags.LightmapStatic | StaticEditorFlags.ReflectionProbeStatic);            
 #endif
 
             return meshStaticFlags & modelStaticFlags;
-		}
+        }
 
-		static string MaterialToString(Material mat)	
-		{
-			if (ReferenceEquals(mat, null))
-				return "null";
-			if (!mat)
-				return "invalid";
-			return mat.name + " " + mat.GetInstanceID().ToString();
-		}
+        static string MaterialToString(Material mat) {
+            if (ReferenceEquals(mat, null))
+                return "null";
+            if (!mat)
+                return "invalid";
+            return mat.name + " " + mat.GetInstanceID().ToString();
+        }
 
-		public static void ClearUVs(CSGModel model)
-		{
-			if (!model.generatedMeshes)
-				return;
+        public static void ClearUVs(CSGModel model) {
+            if (!model.generatedMeshes)
+                return;
 
-			var container = model.generatedMeshes;
-			if (!container || !container.owner)
-				return;
+            var container = model.generatedMeshes;
+            if (!container || !container.owner)
+                return;
 
-            foreach (var instance in container.MeshInstances)
-			{
-				if (!instance)
-					continue;
+            foreach (var instance in container.MeshInstances) {
+                if (!instance)
+                    continue;
 
-				Refresh(instance, model, onlyFastRefreshes: false, skipAssetDatabaseUpdate: true);
-				ClearUVs(instance);
+                Refresh(instance, model, onlyFastRefreshes: false, skipAssetDatabaseUpdate: true);
+                ClearUVs(instance);
             }
         }
 
-		public static void ClearUVs(GeneratedMeshInstance instance)
-        {
-            var meshRendererComponent	= instance.CachedMeshRenderer;
-			if (meshRendererComponent)
-			{
-				meshRendererComponent.realtimeLightmapIndex = -1;
-				meshRendererComponent.lightmapIndex = -1;
-			}
-			instance.LightingHashValue = 0;
-			instance.HasUV2 = false;
-		}
+        public static void ClearUVs(GeneratedMeshInstance instance) {
+            var meshRendererComponent = instance.CachedMeshRenderer;
+            if (meshRendererComponent) {
+                meshRendererComponent.realtimeLightmapIndex = -1;
+                meshRendererComponent.lightmapIndex = -1;
+            }
+            instance.LightingHashValue = 0;
+            instance.HasUV2 = false;
+        }
 
-		public static void Refresh(CSGModel model, bool postProcessScene = false, bool onlyFastRefreshes = true)
-        {
+        public static void Refresh(CSGModel model, bool postProcessScene = false, bool onlyFastRefreshes = true) {
             if (!ModelTraits.IsModelEditable(model))
                 return;
 
-			var generatedMeshes = model.generatedMeshes;
-			if (!generatedMeshes || generatedMeshes.owner != model)
-				return;
+            var generatedMeshes = model.generatedMeshes;
+            if (!generatedMeshes || generatedMeshes.owner != model)
+                return;
 
-            foreach (var instance in generatedMeshes.MeshInstances)
-            {
+            foreach (var instance in generatedMeshes.MeshInstances) {
                 if (!instance)
                     continue;
 
@@ -1125,33 +1000,32 @@ namespace InternalRealtimeCSG
             }
         }
 
-		//		internal static double updateMeshColliderMeshTime = 0.0;
-		public static void Refresh(GeneratedMeshInstance instance, CSGModel owner, bool postProcessScene = false, bool onlyFastRefreshes = true, bool skipAssetDatabaseUpdate = true)
-        {
+        //		internal static double updateMeshColliderMeshTime = 0.0;
+        public static void Refresh(GeneratedMeshInstance instance, CSGModel owner, bool postProcessScene = false, bool onlyFastRefreshes = true, bool skipAssetDatabaseUpdate = true) {
             if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return;
+                return;
 
-			if (!instance)
-				return;
+            if (!instance)
+                return;
 
-			if (postProcessScene)
-				onlyFastRefreshes = false;
+            if (postProcessScene)
+                onlyFastRefreshes = false;
 
             if (!instance.SharedMesh)
                 return;
 
 
             // Update the flags
-            var oldRenderSurfaceType	= instance.RenderSurfaceType;
-			instance.RenderSurfaceType	= GetSurfaceType(instance.MeshDescription, owner.Settings);
-			instance.Dirty				= instance.Dirty || (oldRenderSurfaceType != instance.RenderSurfaceType);
+            var oldRenderSurfaceType = instance.RenderSurfaceType;
+            instance.RenderSurfaceType = GetSurfaceType(instance.MeshDescription, owner.Settings);
+            instance.Dirty = instance.Dirty || (oldRenderSurfaceType != instance.RenderSurfaceType);
 
 
-			// Update the transform, if incorrect
-			var gameObject = instance.gameObject;
-			if (gameObject.transform.localPosition	!= MathConstants.zeroVector3)			gameObject.transform.localPosition	= MathConstants.zeroVector3;
-			if (gameObject.transform.localRotation	!= MathConstants.identityQuaternion)	gameObject.transform.localRotation	= MathConstants.identityQuaternion;
-			if (gameObject.transform.localScale		!= MathConstants.oneVector3)			gameObject.transform.localScale		= MathConstants.oneVector3;
+            // Update the transform, if incorrect
+            var gameObject = instance.gameObject;
+            if (gameObject.transform.localPosition != MathConstants.zeroVector3) gameObject.transform.localPosition = MathConstants.zeroVector3;
+            if (gameObject.transform.localRotation != MathConstants.identityQuaternion) gameObject.transform.localRotation = MathConstants.identityQuaternion;
+            if (gameObject.transform.localScale != MathConstants.oneVector3) gameObject.transform.localScale = MathConstants.oneVector3;
 
 
 #if SHOW_GENERATED_MESHES
@@ -1159,111 +1033,95 @@ namespace InternalRealtimeCSG
 			var transformFlags      = HideFlags.None;
 			var gameObjectFlags     = HideFlags.None;
 #else
-			var meshInstanceFlags   = HideFlags.DontSaveInBuild;// | HideFlags.NotEditable;
-			var transformFlags      = HideFlags.HideInInspector;// | HideFlags.NotEditable;
-			var gameObjectFlags     = HideFlags.None;
+            var meshInstanceFlags = HideFlags.DontSaveInBuild;// | HideFlags.NotEditable;
+            var transformFlags = HideFlags.HideInInspector;// | HideFlags.NotEditable;
+            var gameObjectFlags = HideFlags.None;
 #endif
 
-			if (gameObject.transform.hideFlags	!= transformFlags)		{ gameObject.transform.hideFlags	= transformFlags; }
-			if (gameObject.hideFlags			!= gameObjectFlags)		{ gameObject.hideFlags				= gameObjectFlags; }
-			if (instance.hideFlags				!= meshInstanceFlags)	{ instance.hideFlags				= meshInstanceFlags; }
+            if (gameObject.transform.hideFlags != transformFlags) { gameObject.transform.hideFlags = transformFlags; }
+            if (gameObject.hideFlags != gameObjectFlags) { gameObject.hideFlags = gameObjectFlags; }
+            if (instance.hideFlags != meshInstanceFlags) { instance.hideFlags = meshInstanceFlags; }
 
-			
-			var showVisibleSurfaces	=	instance.RenderSurfaceType != RenderSurfaceType.Normal ||
-										(RealtimeCSG.CSGSettings.VisibleHelperSurfaces & HelperSurfaceFlags.ShowVisibleSurfaces) != 0;
+
+            var showVisibleSurfaces = instance.RenderSurfaceType != RenderSurfaceType.Normal ||
+                                        (RealtimeCSG.CSGSettings.VisibleHelperSurfaces & HelperSurfaceFlags.ShowVisibleSurfaces) != 0;
 
             CSGVisibilityUtility.SetGameObjectVisibility(gameObject, showVisibleSurfaces);
-			if (!instance.enabled) instance.enabled = true;
-			
-			
-			// Update navigation on mesh
-			var oldStaticFlags = GameObjectUtility.GetStaticEditorFlags(gameObject);
-			var newStaticFlags = FilterStaticEditorFlags(GameObjectUtility.GetStaticEditorFlags(owner.gameObject), instance.RenderSurfaceType);
-			if (newStaticFlags != oldStaticFlags)
-			{
-				GameObjectUtility.SetStaticEditorFlags(gameObject, newStaticFlags);
-			}
+            if (!instance.enabled) instance.enabled = true;
 
-			var meshFilterComponent		= instance.CachedMeshFilter;
-			var meshRendererComponent	= instance.CachedMeshRenderer;
-			
-			
 
-			var needMeshRenderer		= NeedMeshRenderer(instance.RenderSurfaceType);
-			if (needMeshRenderer)
-			{
-				if (!meshRendererComponent)
-				{
-					meshRendererComponent = gameObject.GetComponent<MeshRenderer>();
-					instance.CachedMeshRendererSO = null;
-				}
-				if (!meshFilterComponent)
-				{
-					meshFilterComponent = gameObject.GetComponent<MeshFilter>();
-					if (!meshFilterComponent)
-					{
-						meshFilterComponent = gameObject.AddComponent<MeshFilter>();
-						instance.CachedMeshRendererSO = null;
-						instance.Dirty = true;
+            // Update navigation on mesh
+            var oldStaticFlags = GameObjectUtility.GetStaticEditorFlags(gameObject);
+            var newStaticFlags = FilterStaticEditorFlags(GameObjectUtility.GetStaticEditorFlags(owner.gameObject), instance.RenderSurfaceType);
+            if (newStaticFlags != oldStaticFlags) {
+                GameObjectUtility.SetStaticEditorFlags(gameObject, newStaticFlags);
+            }
+
+            var meshFilterComponent = instance.CachedMeshFilter;
+            var meshRendererComponent = instance.CachedMeshRenderer;
+
+
+
+            var needMeshRenderer = NeedMeshRenderer(instance.RenderSurfaceType);
+            if (needMeshRenderer) {
+                if (!meshRendererComponent) {
+                    meshRendererComponent = gameObject.GetComponent<MeshRenderer>();
+                }
+                if (!meshFilterComponent) {
+                    meshFilterComponent = gameObject.GetComponent<MeshFilter>();
+                    if (!meshFilterComponent) {
+                        meshFilterComponent = gameObject.AddComponent<MeshFilter>();
+                        instance.Dirty = true;
                     }
                 }
 
-//				var ownerReceiveShadows = owner.ReceiveShadows;
-//				var shadowCastingMode	= owner.ShadowCastingModeFlags;
-				var ownerReceiveShadows = true;
-				var shadowCastingMode	= owner.IsTwoSidedShadows ? UnityEngine.Rendering.ShadowCastingMode.TwoSided : UnityEngine.Rendering.ShadowCastingMode.On;
-				if (instance.RenderSurfaceType == RenderSurfaceType.ShadowOnly)
-				{
-					shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-				}
-
-				
-				switch (instance.MeshDescription.meshQuery.LayerQuery)
-				{
-					case LayerUsageFlags.RenderReceiveCastShadows:
-					{
-						break;
-					}
-					case LayerUsageFlags.RenderReceiveShadows:
-					{
-						shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-						break;
-					} 
-					case LayerUsageFlags.RenderCastShadows:
-					{
-						ownerReceiveShadows = false;
-						break;
-					}
-					case LayerUsageFlags.Renderable:
-					{
-						shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-						ownerReceiveShadows = false;
-						break;
-					}
-					case LayerUsageFlags.CastShadows:
-					{
-						shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-						ownerReceiveShadows = false;
-						break;
-					}
-				}
+                //				var ownerReceiveShadows = owner.ReceiveShadows;
+                //				var shadowCastingMode	= owner.ShadowCastingModeFlags;
+                var ownerReceiveShadows = true;
+                var shadowCastingMode = owner.IsTwoSidedShadows ? UnityEngine.Rendering.ShadowCastingMode.TwoSided : UnityEngine.Rendering.ShadowCastingMode.On;
+                if (instance.RenderSurfaceType == RenderSurfaceType.ShadowOnly) {
+                    shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                }
 
 
-				var requiredMaterial = instance.RenderMaterial;
-				if (shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly)
-					// Note: need non-transparent material here
-					requiredMaterial = MaterialUtility.DefaultMaterial;
+                switch (instance.MeshDescription.meshQuery.LayerQuery) {
+                    case LayerUsageFlags.RenderReceiveCastShadows: {
+                            break;
+                        }
+                    case LayerUsageFlags.RenderReceiveShadows: {
+                            shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                            break;
+                        }
+                    case LayerUsageFlags.RenderCastShadows: {
+                            ownerReceiveShadows = false;
+                            break;
+                        }
+                    case LayerUsageFlags.Renderable: {
+                            shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                            ownerReceiveShadows = false;
+                            break;
+                        }
+                    case LayerUsageFlags.CastShadows: {
+                            shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                            ownerReceiveShadows = false;
+                            break;
+                        }
+                }
 
-				if (!requiredMaterial)
-					requiredMaterial = MaterialUtility.MissingMaterial;
 
-				if (!meshRendererComponent)
-				{
-					meshRendererComponent = gameObject.AddComponent<MeshRenderer>();
-					meshRendererComponent.sharedMaterial = requiredMaterial;
-					meshRendererComponent.gameObject.name = RenderMeshInstanceName;
-					instance.CachedMeshRendererSO = null;
-					instance.Dirty = true;
+                var requiredMaterial = instance.RenderMaterial;
+                if (shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly)
+                    // Note: need non-transparent material here
+                    requiredMaterial = MaterialUtility.DefaultMaterial;
+
+                if (!requiredMaterial)
+                    requiredMaterial = MaterialUtility.MissingMaterial;
+
+                if (!meshRendererComponent) {
+                    meshRendererComponent = gameObject.AddComponent<MeshRenderer>();
+                    meshRendererComponent.sharedMaterial = requiredMaterial;
+                    meshRendererComponent.gameObject.name = RenderMeshInstanceName;
+                    instance.Dirty = true;
                     // we don't actually want the unity style of rendering a wireframe 
                     // for our meshes, so we turn it off
                     //*
@@ -1271,295 +1129,190 @@ namespace InternalRealtimeCSG
                     //*/
                 }
 
-                if ((meshFilterComponent.hideFlags & HideFlags.HideInHierarchy) == 0)
-                {
+                if ((meshFilterComponent.hideFlags & HideFlags.HideInHierarchy) == 0) {
                     meshFilterComponent.hideFlags |= HideFlags.HideInHierarchy;
                 }
-                
-                if ((meshRendererComponent.hideFlags & HideFlags.HideInHierarchy) == 0)
-                {
+
+                if ((meshRendererComponent.hideFlags & HideFlags.HideInHierarchy) == 0) {
                     meshRendererComponent.hideFlags |= HideFlags.HideInHierarchy;
                 }
 
-                if (instance.RenderSurfaceType != RenderSurfaceType.ShadowOnly)
-				{ 
-					if (instance.HasUV2 && 
-						(instance.LightingHashValue != instance.MeshDescription.geometryHashValue) && meshRendererComponent)
-                    {
+                if (instance.RenderSurfaceType != RenderSurfaceType.ShadowOnly) {
+                    if (instance.HasUV2 &&
+                        (instance.LightingHashValue != instance.MeshDescription.geometryHashValue) && meshRendererComponent) {
                         instance.ResetUVTime = Time.realtimeSinceStartup;
-						if (instance.HasUV2)
-							ClearUVs(instance);
+                        if (instance.HasUV2)
+                            ClearUVs(instance);
                     }
 
-					if ((owner.AutoRebuildUVs || postProcessScene))
-					{
-						if ((float.IsPositiveInfinity(instance.ResetUVTime) || ((Time.realtimeSinceStartup - instance.ResetUVTime) > 2.0f)) &&
-							NeedToGenerateLightmapUVsForModel(owner))
-						{
-							GenerateLightmapUVsForModel(owner);
-						}
-					}
-				}
+                    if ((owner.AutoRebuildUVs || postProcessScene)) {
+                        if ((float.IsPositiveInfinity(instance.ResetUVTime) || ((Time.realtimeSinceStartup - instance.ResetUVTime) > 2.0f)) &&
+                            NeedToGenerateLightmapUVsForModel(owner)) {
+                            GenerateLightmapUVsForModel(owner);
+                        }
+                    }
+                }
 
-				if (instance.HasNoCracks && instance.CracksHashValue != instance.MeshDescription.geometryHashValue && meshRendererComponent)
-				{
-					instance.ResetStitchCracksTime = Time.realtimeSinceStartup;
-					if(instance.HasNoCracks)
-						ClearCrackStitching(instance);
-				}
+                if (instance.HasNoCracks && instance.CracksHashValue != instance.MeshDescription.geometryHashValue && meshRendererComponent) {
+                    instance.ResetStitchCracksTime = Time.realtimeSinceStartup;
+                    if (instance.HasNoCracks)
+                        ClearCrackStitching(instance);
+                }
 
-				if (owner.AutoStitchCracks || postProcessScene)
-				{
-					if ((float.IsPositiveInfinity(instance.ResetStitchCracksTime) || Time.realtimeSinceStartup - instance.ResetStitchCracksTime > 2.0f) &&
-					    NeedToStitchCracksForModel(owner))
-					{
-						StitchCracksForModel(owner);
-					}
-				}
+                if (owner.AutoStitchCracks || postProcessScene) {
+                    if ((float.IsPositiveInfinity(instance.ResetStitchCracksTime) || Time.realtimeSinceStartup - instance.ResetStitchCracksTime > 2.0f) &&
+                        NeedToStitchCracksForModel(owner)) {
+                        StitchCracksForModel(owner);
+                    }
+                }
 
                 if (!postProcessScene &&
-                    meshFilterComponent.sharedMesh != instance.SharedMesh)
-                {
+                    meshFilterComponent.sharedMesh != instance.SharedMesh) {
                     meshFilterComponent.sharedMesh = instance.SharedMesh;
                 }
 
-				if (meshRendererComponent &&
-					meshRendererComponent.shadowCastingMode != shadowCastingMode)
-                {
+                if (meshRendererComponent &&
+                    meshRendererComponent.shadowCastingMode != shadowCastingMode) {
                     meshRendererComponent.shadowCastingMode = shadowCastingMode;
-					instance.Dirty = true;
-				}
+                    instance.Dirty = true;
+                }
 
-				if (meshRendererComponent && 
-					meshRendererComponent.receiveShadows != ownerReceiveShadows)
-                {
+                if (meshRendererComponent &&
+                    meshRendererComponent.receiveShadows != ownerReceiveShadows) {
                     meshRendererComponent.receiveShadows = ownerReceiveShadows;
-					instance.Dirty = true;
-				}
+                    instance.Dirty = true;
+                }
 
 
-				//*
-				if (!onlyFastRefreshes)
-				{
-					var meshRendererComponentSO	= instance.CachedMeshRendererSO as UnityEditor.SerializedObject;
-					if (meshRendererComponentSO == null)
-					{
-						if (meshRendererComponent)
-						{
-							instance.CachedMeshRendererSO =
-							meshRendererComponentSO = new SerializedObject(meshRendererComponent);
-						}
-					} else
-					if (!meshRendererComponent)
-					{
-						instance.CachedMeshRendererSO =
-						meshRendererComponentSO = null; 
-					}
-					if (meshRendererComponentSO != null)
-					{
-						bool SOModified = false;
-                        meshRendererComponentSO.Update(); 
-						var scaleInLightmapProperty = meshRendererComponentSO.FindProperty("m_ScaleInLightmap");
-						var scaleInLightmap			= owner.scaleInLightmap;
-						if (scaleInLightmapProperty != null &&
-							scaleInLightmapProperty.floatValue != scaleInLightmap)
-                        {
-                            scaleInLightmapProperty.floatValue = scaleInLightmap;
-							SOModified = true;
-						}
+                //*
+                if (meshRendererComponent != null) {
+                    meshRendererComponent.scaleInLightmap = owner.scaleInLightmap;
+                    meshRendererComponent.stitchLightmapSeams = owner.StitchLightmapSeams;
 
-						var autoUVMaxDistanceProperty		= meshRendererComponentSO.FindProperty("m_AutoUVMaxDistance");
-						var autoUVMaxDistance				= owner.autoUVMaxDistance;
-						if (autoUVMaxDistanceProperty != null &&
-							autoUVMaxDistanceProperty.floatValue != autoUVMaxDistance)
-                        {
-                            autoUVMaxDistanceProperty.floatValue = autoUVMaxDistance;
-							SOModified = true;
-						}
+                    // Not included:
+                    // m_AutoUVMaxDistance
+                    // m_AutoUVMaxAngle
+                    // m_IgnoreNormalsForChartDetection
+                    // m_MinimumChartSize
+                    // m_PreserveUVs
+                }
 
-						var autoUVMaxAngleProperty			= meshRendererComponentSO.FindProperty("m_AutoUVMaxAngle");
-						var autoUVMaxAngle					= owner.autoUVMaxAngle;
-						if (autoUVMaxAngleProperty != null &&
-							autoUVMaxAngleProperty.floatValue != autoUVMaxAngle)
-                        {
-                            autoUVMaxAngleProperty.floatValue = autoUVMaxAngle;
-							SOModified = true;
-						}
 
-						var ignoreNormalsProperty			= meshRendererComponentSO.FindProperty("m_IgnoreNormalsForChartDetection");
-						var ignoreNormals					= owner.IgnoreNormals;
-						if (ignoreNormalsProperty != null &&
-							ignoreNormalsProperty.boolValue != ignoreNormals)
-                        {
-                            ignoreNormalsProperty.boolValue = ignoreNormals;
-							SOModified = true;
-						}
-					
-						var minimumChartSizeProperty		= meshRendererComponentSO.FindProperty("m_MinimumChartSize");
-						var minimumChartSize				= owner.minimumChartSize;
-						if (minimumChartSizeProperty != null &&
-							minimumChartSizeProperty.intValue != minimumChartSize)
-                        {
-                            minimumChartSizeProperty.intValue = minimumChartSize;
-							SOModified = true;
-						}
+                if (!onlyFastRefreshes) {
+                }
 
-						var preserveUVsProperty		= meshRendererComponentSO.FindProperty("m_PreserveUVs");
-						var preserveUVs				= owner.PreserveUVs;
-						if (preserveUVsProperty != null &&
-							preserveUVsProperty.boolValue != preserveUVs)
-                        {
-                            preserveUVsProperty.boolValue = preserveUVs;
-							SOModified = true;
-						}
-
-#if UNITY_2017_2_OR_NEWER
-                        var stitchLightmapSeamsProperty = meshRendererComponentSO.FindProperty("m_StitchLightmapSeams");
-						var stitchLightmapSeams			= owner.StitchLightmapSeams;
-						if (stitchLightmapSeamsProperty != null && // Note that some alpha/beta versions of 2017.2 had a different name
-							stitchLightmapSeamsProperty.boolValue != stitchLightmapSeams)
-                        {
-                            stitchLightmapSeamsProperty.boolValue = stitchLightmapSeams;
-							SOModified = true;
-						}
-#endif
-
-                        if (SOModified)
-                            meshRendererComponentSO.ApplyModifiedProperties();
-                    }
-				}
                 //*/
 
 #if UNITY_2019_2_OR_NEWER
                 var receiveGI = owner.ReceiveGI;
                 if (meshRendererComponent &&
-                    meshRendererComponent.receiveGI != receiveGI)
-                {
+                    meshRendererComponent.receiveGI != receiveGI) {
                     meshRendererComponent.receiveGI = receiveGI;
                     instance.Dirty = true;
                 }
 #endif
 
                 if (meshRendererComponent &&
-					meshRendererComponent.sharedMaterial != requiredMaterial)
-                {
+                    meshRendererComponent.sharedMaterial != requiredMaterial) {
                     meshRendererComponent.sharedMaterial = requiredMaterial;
-					instance.Dirty = true;
+                    instance.Dirty = true;
                 }
 
-			} else
-			{
-				if (meshFilterComponent)
-                {
+            } else {
+                if (meshFilterComponent) {
                     meshFilterComponent.hideFlags = HideFlags.None; UnityEngine.Object.DestroyImmediate(meshFilterComponent); instance.Dirty = true;
                 }
-				if (meshRendererComponent)
-                {
+                if (meshRendererComponent) {
                     meshRendererComponent.hideFlags = HideFlags.None; UnityEngine.Object.DestroyImmediate(meshRendererComponent); instance.Dirty = true;
                 }
-				instance.LightingHashValue = instance.MeshDescription.geometryHashValue;
-				instance.CracksHashValue = instance.MeshDescription.geometryHashValue;
-				meshFilterComponent = null;
-				meshRendererComponent = null;
-				instance.CachedMeshRendererSO = null;
-			}
-						
-			instance.CachedMeshFilter   = meshFilterComponent;
-			instance.CachedMeshRenderer = meshRendererComponent;
+                instance.LightingHashValue = instance.MeshDescription.geometryHashValue;
+                instance.CracksHashValue = instance.MeshDescription.geometryHashValue;
+                meshFilterComponent = null;
+                meshRendererComponent = null;
+            }
 
-			// TODO:	navmesh specific mesh
-			// TODO:	occludee/reflection probe static
-			
-			var meshColliderComponent	= instance.CachedMeshCollider;
-			var needMeshCollider		= !AreBoundsEmpty(instance) && NeedCollider(instance.RenderSurfaceType);
+            instance.CachedMeshFilter = meshFilterComponent;
+            instance.CachedMeshRenderer = meshRendererComponent;
 
-			if (needMeshCollider)
-			{
-				if (!meshColliderComponent)
-					meshColliderComponent = gameObject.GetComponent<MeshCollider>();
-				if (meshColliderComponent && !meshColliderComponent.enabled)
-					meshColliderComponent.enabled = true;
+            // TODO:	navmesh specific mesh
+            // TODO:	occludee/reflection probe static
 
-				if (!meshColliderComponent)
-				{
-					meshColliderComponent = gameObject.AddComponent<MeshCollider>();
-					meshColliderComponent.gameObject.name = ColliderMeshInstanceName;
-					instance.Dirty = true;
-				}
+            var meshColliderComponent = instance.CachedMeshCollider;
+            var needMeshCollider = !AreBoundsEmpty(instance) && NeedCollider(instance.RenderSurfaceType);
+
+            if (needMeshCollider) {
+                if (!meshColliderComponent)
+                    meshColliderComponent = gameObject.GetComponent<MeshCollider>();
+                if (meshColliderComponent && !meshColliderComponent.enabled)
+                    meshColliderComponent.enabled = true;
+
+                if (!meshColliderComponent) {
+                    meshColliderComponent = gameObject.AddComponent<MeshCollider>();
+                    meshColliderComponent.gameObject.name = ColliderMeshInstanceName;
+                    instance.Dirty = true;
+                }
 
                 // stops it from rendering wireframe in scene
-                if ((meshColliderComponent.hideFlags & HideFlags.HideInHierarchy) == 0)
-                {
+                if ((meshColliderComponent.hideFlags & HideFlags.HideInHierarchy) == 0) {
                     meshColliderComponent.hideFlags |= HideFlags.HideInHierarchy;
                 }
 
                 var currentPhysicsMaterial = instance.PhysicsMaterial ?? owner.DefaultPhysicsMaterial;
-				if (meshColliderComponent.sharedMaterial != currentPhysicsMaterial)
-                {
+                if (meshColliderComponent.sharedMaterial != currentPhysicsMaterial) {
                     meshColliderComponent.sharedMaterial = currentPhysicsMaterial;
-					instance.Dirty = true;
-				}
+                    instance.Dirty = true;
+                }
 
-				var setToConvex = owner.SetColliderConvex;
-				if (meshColliderComponent.convex != setToConvex)
-                {
+                var setToConvex = owner.SetColliderConvex;
+                if (meshColliderComponent.convex != setToConvex) {
                     meshColliderComponent.convex = setToConvex;
-					instance.Dirty = true;
-				}
+                    instance.Dirty = true;
+                }
 
 #if UNITY_2017_3_OR_NEWER
-				var cookingOptions = owner.MeshColliderCookingOptions;
-				if (meshColliderComponent.cookingOptions != cookingOptions)
-                {
+                var cookingOptions = owner.MeshColliderCookingOptions;
+                if (meshColliderComponent.cookingOptions != cookingOptions) {
                     meshColliderComponent.cookingOptions = cookingOptions;
-					instance.Dirty = true;
-				}
+                    instance.Dirty = true;
+                }
 #endif
 
-				if (instance.RenderSurfaceType == RenderSurfaceType.Trigger ||
-					owner.IsTrigger)
-				{
-					if (!meshColliderComponent.isTrigger)
-					{
-						meshColliderComponent.isTrigger = true;
-						instance.Dirty = true;
-					}
-				} else
-				{
-					if (meshColliderComponent.isTrigger)
-					{
-						meshColliderComponent.isTrigger = false;
-						instance.Dirty = true;
-					}
-				}
+                if (instance.RenderSurfaceType == RenderSurfaceType.Trigger ||
+                    owner.IsTrigger) {
+                    if (!meshColliderComponent.isTrigger) {
+                        meshColliderComponent.isTrigger = true;
+                        instance.Dirty = true;
+                    }
+                } else {
+                    if (meshColliderComponent.isTrigger) {
+                        meshColliderComponent.isTrigger = false;
+                        instance.Dirty = true;
+                    }
+                }
 
-                if (meshColliderComponent.sharedMesh != instance.SharedMesh)
-                {
+                if (meshColliderComponent.sharedMesh != instance.SharedMesh) {
                     meshColliderComponent.sharedMesh = instance.SharedMesh;
                 }
 
-				// .. for some reason this fixes mesh-colliders not being found with ray-casts in the editor?
+                // .. for some reason this fixes mesh-colliders not being found with ray-casts in the editor?
 #if UNITY_EDITOR
-				if (instance.Dirty)
-				{
-					meshColliderComponent.enabled = false;
-					meshColliderComponent.enabled = true;
-				}
+                if (instance.Dirty) {
+                    meshColliderComponent.enabled = false;
+                    meshColliderComponent.enabled = true;
+                }
 #endif
-			} else
-			{
-				if (meshColliderComponent) { meshColliderComponent.hideFlags = HideFlags.None; UnityEngine.Object.DestroyImmediate(meshColliderComponent); instance.Dirty = true; }
-				meshColliderComponent = null;
-			}
-			instance.CachedMeshCollider = meshColliderComponent;
-			
-			if (!postProcessScene)
-			{
+            } else {
+                if (meshColliderComponent) { meshColliderComponent.hideFlags = HideFlags.None; UnityEngine.Object.DestroyImmediate(meshColliderComponent); instance.Dirty = true; }
+                meshColliderComponent = null;
+            }
+            instance.CachedMeshCollider = meshColliderComponent;
+
+            if (!postProcessScene) {
 #if SHOW_GENERATED_MESHES
 				if (instance.Dirty)
 					UpdateName(instance);
 #else
-				/*
+                /*
 				if (needMeshRenderer)
 				{
 					if (instance.name != RenderMeshInstanceName)
@@ -1572,9 +1325,9 @@ namespace InternalRealtimeCSG
 				}
 				*/
 #endif
-				instance.Dirty = false;
-			}
-		}
+                instance.Dirty = false;
+            }
+        }
 
 #if SHOW_GENERATED_MESHES
 		private static void UpdateName(GeneratedMeshInstance instance)
@@ -1608,18 +1361,16 @@ namespace InternalRealtimeCSG
 		}
 #endif
 
-		static int RefreshModelCounter = 0;
-		
-		public static void UpdateHelperSurfaceVisibility(bool force = false)
-		{
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return;
-            
+        static int RefreshModelCounter = 0;
+
+        public static void UpdateHelperSurfaceVisibility(bool force = false) {
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+                return;
+
             //			updateMeshColliderMeshTime = 0.0;
             var models = InternalCSGModelManager.Models;
-			var currentRefreshModelCount = 0;
-            for (var i = 0; i < models.Length; i++)
-            {
+            var currentRefreshModelCount = 0;
+            for (var i = 0; i < models.Length; i++) {
                 var model = models[i];
                 if (!ModelTraits.IsModelEditable(model))
                     continue;
@@ -1629,13 +1380,10 @@ namespace InternalRealtimeCSG
                     continue;
 
                 if (force ||
-                    RefreshModelCounter == currentRefreshModelCount)
-                {
+                    RefreshModelCounter == currentRefreshModelCount) {
                     UpdateContainerFlags(generatedMeshes);
-                    foreach (var instance in generatedMeshes.MeshInstances)
-                    {
-                        if (!instance)
-                        {
+                    foreach (var instance in generatedMeshes.MeshInstances) {
+                        if (!instance) {
                             ValidateGeneratedMeshesDelayed(generatedMeshes);
                             continue;
                         }
@@ -1647,181 +1395,157 @@ namespace InternalRealtimeCSG
             }
 
             if (RefreshModelCounter < currentRefreshModelCount)
-				RefreshModelCounter++;
-			else
-				RefreshModelCounter = 0;
+                RefreshModelCounter++;
+            else
+                RefreshModelCounter = 0;
 
-			UpdateHelperSurfaces();
-		}
+            UpdateHelperSurfaces();
+        }
 
-		private static void AssignLayerToChildren(GameObject gameObject)
-		{
-			if (!gameObject)
-				return;
+        private static void AssignLayerToChildren(GameObject gameObject) {
+            if (!gameObject)
+                return;
             var layer = gameObject.layer;
-            foreach (var transform in gameObject.GetComponentsInChildren<Transform>(true))
-            {
+            foreach (var transform in gameObject.GetComponentsInChildren<Transform>(true)) {
                 if (transform.GetComponent<CSGNode>())
                     transform.gameObject.layer = layer;
             }
-		}
+        }
 
-		public static void UpdateGeneratedMeshesVisibility(CSGModel model)
-		{
-			if (!model.generatedMeshes)
-				return;
+        public static void UpdateGeneratedMeshesVisibility(CSGModel model) {
+            if (!model.generatedMeshes)
+                return;
 
-			UpdateGeneratedMeshesVisibility(model.generatedMeshes, model.ShowGeneratedMeshes);
-		}
+            UpdateGeneratedMeshesVisibility(model.generatedMeshes, model.ShowGeneratedMeshes);
+        }
 
-		public static void UpdateGeneratedMeshesVisibility(GeneratedMeshes container, bool visible)
-        {
+        public static void UpdateGeneratedMeshesVisibility(GeneratedMeshes container, bool visible) {
             if (!ModelTraits.IsModelEditable(container.owner) ||
                 ModelTraits.IsDefaultModel(container.owner))
-				return;
+                return;
 
 
 
-            var containerGameObject = container.gameObject; 
-			
-			HideFlags gameObjectFlags;
-			HideFlags transformFlags;
+            var containerGameObject = container.gameObject;
+
+            HideFlags gameObjectFlags;
+            HideFlags transformFlags;
 #if SHOW_GENERATED_MESHES
 			gameObjectFlags = HideFlags.None;
 #else
-			if (visible)
-			{
-				gameObjectFlags = HideFlags.HideInInspector;
-			} else
-			{
-				gameObjectFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
-			}
+            if (visible) {
+                gameObjectFlags = HideFlags.HideInInspector;
+            } else {
+                gameObjectFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
+            }
 #endif
-			transformFlags = gameObjectFlags | HideFlags.NotEditable;
+            transformFlags = gameObjectFlags | HideFlags.NotEditable;
 
-			if (containerGameObject.hideFlags != gameObjectFlags)
-            {
+            if (containerGameObject.hideFlags != gameObjectFlags) {
                 containerGameObject.hideFlags = gameObjectFlags;
-			}
+            }
 
-			if (container.transform.hideFlags != transformFlags)
-            {
-                container.transform.hideFlags   = transformFlags;
-				container.hideFlags             = transformFlags | ComponentHideFlags;
-			}
-		}
+            if (container.transform.hideFlags != transformFlags) {
+                container.transform.hideFlags = transformFlags;
+                container.hideFlags = transformFlags | ComponentHideFlags;
+            }
+        }
 
-		static void AutoUpdateRigidBody(GeneratedMeshes container)
-		{
-            var model		= container.owner;
-			var gameObject	= model.gameObject;
-			if (ModelTraits.NeedsRigidBody(model))
-			{
-				var rigidBody = container.CachedRigidBody;
-				if (!rigidBody)
-					rigidBody = model.GetComponent<Rigidbody>();
-				if (!rigidBody)
-					rigidBody = gameObject.AddComponent<Rigidbody>();
+        static void AutoUpdateRigidBody(GeneratedMeshes container) {
+            var model = container.owner;
+            var gameObject = model.gameObject;
+            if (ModelTraits.NeedsRigidBody(model)) {
+                var rigidBody = container.CachedRigidBody;
+                if (!rigidBody)
+                    rigidBody = model.GetComponent<Rigidbody>();
+                if (!rigidBody)
+                    rigidBody = gameObject.AddComponent<Rigidbody>();
 
-				if (rigidBody.hideFlags != HideFlags.None)
-				{
-					rigidBody.hideFlags = HideFlags.None;
-				}
+                if (rigidBody.hideFlags != HideFlags.None) {
+                    rigidBody.hideFlags = HideFlags.None;
+                }
 
-				RigidbodyConstraints constraints;
-				bool isKinematic;
-				bool useGravity;
-				if (ModelTraits.NeedsStaticRigidBody(model))
-				{
-					isKinematic = true;
-					useGravity = false;
-					constraints = RigidbodyConstraints.FreezeAll;
-				} else
-				{
-					isKinematic = false;
-					useGravity = true;
-					constraints = RigidbodyConstraints.None;
-				}
-				
-				if (rigidBody.isKinematic != isKinematic)	rigidBody.isKinematic = isKinematic;
-				if (rigidBody.useGravity  != useGravity)	rigidBody.useGravity = useGravity;
-				if (rigidBody.constraints != constraints)	rigidBody.constraints = constraints;
-				container.CachedRigidBody = rigidBody;
-			} else
-			{
-				var rigidBody = container.CachedRigidBody;
-				if (!rigidBody)
-					rigidBody = model.GetComponent<Rigidbody>();
-				if (rigidBody)
-				{
-					rigidBody.hideFlags = HideFlags.None;
-					UnityEngine.Object.DestroyImmediate(rigidBody);
-				}
-				container.CachedRigidBody = null;
-			}
-		}
+                RigidbodyConstraints constraints;
+                bool isKinematic;
+                bool useGravity;
+                if (ModelTraits.NeedsStaticRigidBody(model)) {
+                    isKinematic = true;
+                    useGravity = false;
+                    constraints = RigidbodyConstraints.FreezeAll;
+                } else {
+                    isKinematic = false;
+                    useGravity = true;
+                    constraints = RigidbodyConstraints.None;
+                }
 
-		public static void RemoveIfEmpty(GameObject gameObject)
-		{
-			var allComponents = gameObject.GetComponents<Component>();
-			for (var i = 0; i < allComponents.Length; i++)
-			{
-				if (allComponents[i] is Transform)
-					continue;
-				if (allComponents[i] is GeneratedMeshInstance)
-					continue;
+                if (rigidBody.isKinematic != isKinematic) rigidBody.isKinematic = isKinematic;
+                if (rigidBody.useGravity != useGravity) rigidBody.useGravity = useGravity;
+                if (rigidBody.constraints != constraints) rigidBody.constraints = constraints;
+                container.CachedRigidBody = rigidBody;
+            } else {
+                var rigidBody = container.CachedRigidBody;
+                if (!rigidBody)
+                    rigidBody = model.GetComponent<Rigidbody>();
+                if (rigidBody) {
+                    rigidBody.hideFlags = HideFlags.None;
+                    UnityEngine.Object.DestroyImmediate(rigidBody);
+                }
+                container.CachedRigidBody = null;
+            }
+        }
 
-				return;
-			}
+        public static void RemoveIfEmpty(GameObject gameObject) {
+            var allComponents = gameObject.GetComponents<Component>();
+            for (var i = 0; i < allComponents.Length; i++) {
+                if (allComponents[i] is Transform)
+                    continue;
+                if (allComponents[i] is GeneratedMeshInstance)
+                    continue;
+
+                return;
+            }
             GameObjectExtensions.Destroy(gameObject);
-		}
+        }
 
         static readonly List<GeneratedMeshInstance> s_foundMeshInstances = new List<GeneratedMeshInstance>();
 
 
-        public static bool ValidateGeneratedMeshesNow(GeneratedMeshes generatedMeshes, bool skipSiblingCheck = false)
-		{
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return false;
+        public static bool ValidateGeneratedMeshesNow(GeneratedMeshes generatedMeshes, bool skipSiblingCheck = false) {
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+                return false;
 
             if (!generatedMeshes)
-				return true;
+                return true;
 
-			if (generatedMeshes.owner && generatedMeshes.gameObject)
-			{
-				if (!skipSiblingCheck)
-				{
-					ValidateModelNow(generatedMeshes.owner, true);
-					if (!generatedMeshes)
-						return true;
-				}
-			} else
-			{
+            if (generatedMeshes.owner && generatedMeshes.gameObject) {
+                if (!skipSiblingCheck) {
+                    ValidateModelNow(generatedMeshes.owner, true);
+                    if (!generatedMeshes)
+                        return true;
+                }
+            } else {
                 GameObjectExtensions.Destroy(generatedMeshes.gameObject);
-				return true;
-			}
+                return true;
+            }
 
             var generatedMeshesGameObject = generatedMeshes.gameObject;
-			var generatedMeshesTransform = generatedMeshesGameObject.transform;
+            var generatedMeshesTransform = generatedMeshesGameObject.transform;
 
             s_foundMeshInstances.Clear();
-			for (var i = 0; i < generatedMeshesTransform.childCount; i++)
-			{
-				var meshInstanceTransform	= generatedMeshesTransform.GetChild(i);
-				var meshInstance			= meshInstanceTransform.GetComponent<GeneratedMeshInstance>();
-				if (!meshInstance)
-				{
+            for (var i = 0; i < generatedMeshesTransform.childCount; i++) {
+                var meshInstanceTransform = generatedMeshesTransform.GetChild(i);
+                var meshInstance = meshInstanceTransform.GetComponent<GeneratedMeshInstance>();
+                if (!meshInstance) {
                     if (meshInstanceTransform.gameObject &&
-						meshInstanceTransform.hideFlags != HideFlags.DontSave)
+                        meshInstanceTransform.hideFlags != HideFlags.DontSave)
                         GameObjectExtensions.Destroy(meshInstanceTransform.gameObject);
                     continue;
-				}
-				var key = meshInstance.GenerateKey();
-				if (!generatedMeshes.HasMeshInstance(key))
-				{
+                }
+                var key = meshInstance.GenerateKey();
+                if (!generatedMeshes.HasMeshInstance(key)) {
                     GameObjectExtensions.Destroy(meshInstanceTransform.gameObject);
-					continue;
-				}
+                    continue;
+                }
 
                 /*
 				if (meshInstance.RenderSurfaceType == RenderSurfaceType.Normal && !meshInstance.RenderMaterial)
@@ -1830,354 +1554,309 @@ namespace InternalRealtimeCSG
 					continue; 
 				}
 				*/
-                if (!ValidMeshInstance(meshInstance))
-				{
+                if (!ValidMeshInstance(meshInstance)) {
                     GameObjectExtensions.Destroy(meshInstanceTransform.gameObject);
-					continue;
-				}
+                    continue;
+                }
 
                 s_foundMeshInstances.Add(meshInstance);
             }
 
             generatedMeshes.SetMeshInstances(s_foundMeshInstances);
 
-            if (string.IsNullOrEmpty(generatedMeshesGameObject.name))
-			{
-				var flags = generatedMeshesGameObject.hideFlags;
+            if (string.IsNullOrEmpty(generatedMeshesGameObject.name)) {
+                var flags = generatedMeshesGameObject.hideFlags;
 
-				if (generatedMeshesGameObject.hideFlags != HideFlags.None)
-				{
-					generatedMeshesGameObject.hideFlags = HideFlags.None;
-				}
+                if (generatedMeshesGameObject.hideFlags != HideFlags.None) {
+                    generatedMeshesGameObject.hideFlags = HideFlags.None;
+                }
 
-				generatedMeshesGameObject.name  = MeshContainerName;
+                generatedMeshesGameObject.name = MeshContainerName;
 
-				if (generatedMeshesGameObject.hideFlags != flags)
-				{
-					generatedMeshesGameObject.hideFlags = flags;
-				}
-			}
+                if (generatedMeshesGameObject.hideFlags != flags) {
+                    generatedMeshesGameObject.hideFlags = flags;
+                }
+            }
 
-			if (generatedMeshes.owner)
-				UpdateGeneratedMeshesVisibility(generatedMeshes, generatedMeshes.owner.ShowGeneratedMeshes);
-			
-			if (generatedMeshes.owner)
-			{
-				var modelTransform = generatedMeshes.owner.transform;
-				if (generatedMeshesTransform.parent != modelTransform)
-					generatedMeshesTransform.parent.SetParent(modelTransform, true);
-			}
+            if (generatedMeshes.owner)
+                UpdateGeneratedMeshesVisibility(generatedMeshes, generatedMeshes.owner.ShowGeneratedMeshes);
+
+            if (generatedMeshes.owner) {
+                var modelTransform = generatedMeshes.owner.transform;
+                if (generatedMeshesTransform.parent != modelTransform)
+                    generatedMeshesTransform.parent.SetParent(modelTransform, true);
+            }
             return false;
-		}
-		
-		public static GeneratedMeshInstance[] GetAllModelMeshInstances(GeneratedMeshes container)
-		{
-			if (!container.HasMeshInstances)
-				return null;
+        }
 
-			return container.MeshInstances;
-		}
-		
-		public static GeneratedMeshInstance GetMeshInstance(GeneratedMeshes container, GeneratedMeshDescription meshDescription, ModelSettingsFlags modelSettings, RenderSurfaceType renderSurfaceType)
-		{
-			var key	= MeshInstanceKey.GenerateKey(meshDescription);
-			var instance = container.GetMeshInstance(key);
-			if (instance && instance.SharedMesh)
+        public static GeneratedMeshInstance[] GetAllModelMeshInstances(GeneratedMeshes container) {
+            if (!container.HasMeshInstances)
+                return null;
+
+            return container.MeshInstances;
+        }
+
+        public static GeneratedMeshInstance GetMeshInstance(GeneratedMeshes container, GeneratedMeshDescription meshDescription, ModelSettingsFlags modelSettings, RenderSurfaceType renderSurfaceType) {
+            var key = MeshInstanceKey.GenerateKey(meshDescription);
+            var instance = container.GetMeshInstance(key);
+            if (instance && instance.SharedMesh)
                 return instance;
             return null;
         }
 
-        public static HelperSurfaceDescription GetHelperSurfaceDescription(GeneratedMeshes container, ModelSettingsFlags modelSettings, GeneratedMeshDescription meshDescription, RenderSurfaceType renderSurfaceType)
-		{
-			var key = MeshInstanceKey.GenerateKey(meshDescription);
-			HelperSurfaceDescription instance = container.GetHelperSurface(key);
-			if (instance != null)
-			{
-				instance.RenderSurfaceType = renderSurfaceType;
-				return instance;
-			}
+        public static HelperSurfaceDescription GetHelperSurfaceDescription(GeneratedMeshes container, ModelSettingsFlags modelSettings, GeneratedMeshDescription meshDescription, RenderSurfaceType renderSurfaceType) {
+            var key = MeshInstanceKey.GenerateKey(meshDescription);
+            HelperSurfaceDescription instance = container.GetHelperSurface(key);
+            if (instance != null) {
+                instance.RenderSurfaceType = renderSurfaceType;
+                return instance;
+            }
 
-			return CreateHelperSurfaceDescription(container, modelSettings, meshDescription, renderSurfaceType);
-		}
+            return CreateHelperSurfaceDescription(container, modelSettings, meshDescription, renderSurfaceType);
+        }
 
-		public static bool IsObjectGenerated(UnityEngine.Object obj) 
-		{
-			if (!obj) 
-				return false;
+        public static bool IsObjectGenerated(UnityEngine.Object obj) {
+            if (!obj)
+                return false;
 
-			var gameObject = obj as GameObject;
-			if (Equals(gameObject, null))
-				return false;
+            var gameObject = obj as GameObject;
+            if (Equals(gameObject, null))
+                return false;
 
-			if (gameObject.name == MeshContainerName)
-				return true;
+            if (gameObject.name == MeshContainerName)
+                return true;
 
-			var parent = gameObject.transform.parent;
-			if (Equals(parent, null))
-				return false;
+            var parent = gameObject.transform.parent;
+            if (Equals(parent, null))
+                return false;
 
-			return parent.name == MeshContainerName;
-		}
+            return parent.name == MeshContainerName;
+        }
 
-#region UpdateTransform
-		public static void UpdateTransforms()
-		{
-			var models = InternalCSGModelManager.Models;
-			for (var i = 0; i < models.Length; i++)
-			{
-				var model = models[i];
+        #region UpdateTransform
+        public static void UpdateTransforms() {
+            var models = InternalCSGModelManager.Models;
+            for (var i = 0; i < models.Length; i++) {
+                var model = models[i];
                 if (!ModelTraits.IsModelEditable(model))
-					continue;
-			
-				UpdateTransform(model.generatedMeshes);
-			}
-		}
+                    continue;
 
-		static void UpdateTransform(GeneratedMeshes container)
-		{
-			if (!container || !container.owner)
-			{
-				return;
-			}
+                UpdateTransform(model.generatedMeshes);
+            }
+        }
 
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return;
+        static void UpdateTransform(GeneratedMeshes container) {
+            if (!container || !container.owner) {
+                return;
+            }
 
-			// TODO: make sure outlines are updated when models move
-			
-			var containerTransform = container.transform;
-			if (containerTransform.localPosition	!= MathConstants.zeroVector3 ||
-				containerTransform.localRotation	!= MathConstants.identityQuaternion ||
-				containerTransform.localScale		!= MathConstants.oneVector3)
-			{
-				containerTransform.localPosition	= MathConstants.zeroVector3;
-				containerTransform.localRotation	= MathConstants.identityQuaternion;
-				containerTransform.localScale		= MathConstants.oneVector3;
-				SceneToolRenderer.SetOutlineDirty();
-			}
-		}
-#endregion
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+                return;
 
-#region UpdateContainerComponents
-		static readonly List<GameObject> __notfoundGameObjects		= new List<GameObject>();
-		public static List<GameObject> FindUnusedMeshInstances(GeneratedMeshes                    container, 
-													           HashSet<GeneratedMeshInstance>     foundInstances)
-		{
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+            // TODO: make sure outlines are updated when models move
+
+            var containerTransform = container.transform;
+            if (containerTransform.localPosition != MathConstants.zeroVector3 ||
+                containerTransform.localRotation != MathConstants.identityQuaternion ||
+                containerTransform.localScale != MathConstants.oneVector3) {
+                containerTransform.localPosition = MathConstants.zeroVector3;
+                containerTransform.localRotation = MathConstants.identityQuaternion;
+                containerTransform.localScale = MathConstants.oneVector3;
+                SceneToolRenderer.SetOutlineDirty();
+            }
+        }
+        #endregion
+
+        #region UpdateContainerComponents
+        static readonly List<GameObject> __notfoundGameObjects = new List<GameObject>();
+        public static List<GameObject> FindUnusedMeshInstances(GeneratedMeshes container,
+                                                               HashSet<GeneratedMeshInstance> foundInstances) {
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
                 return null;
 
-			if (!container || !container.owner)
-				return null;
+            if (!container || !container.owner)
+                return null;
 
             __notfoundGameObjects.Clear();
-            if (container.HasMeshInstances)
-            {
+            if (container.HasMeshInstances) {
                 var instances = container.GetComponentsInChildren<GeneratedMeshInstance>(true);
-                if (foundInstances == null)
-                {
+                if (foundInstances == null) {
                     for (int i = 0; i < instances.Length; i++)
                         __notfoundGameObjects.Add(instances[i].gameObject);
-                } else
-                {
-                    for (int i = 0; i < instances.Length; i++)
-                    {
+                } else {
+                    for (int i = 0; i < instances.Length; i++) {
                         var instance = instances[i];
-                        if (!foundInstances.Contains(instance))
-                        {
+                        if (!foundInstances.Contains(instance)) {
                             __notfoundGameObjects.Add(instance.gameObject);
-                            continue; 
-                        } 
+                            continue;
+                        }
                     }
                 }
             }
 
             var generatedMeshesTransform = container.transform;
-            for (int i = 0; i < generatedMeshesTransform.childCount; i++)
-            {
+            for (int i = 0; i < generatedMeshesTransform.childCount; i++) {
                 var childTransform = generatedMeshesTransform.GetChild(i);
                 var childGameObject = childTransform.gameObject;
 
                 if (childGameObject.activeSelf)
                     continue;
 
-                __notfoundGameObjects.Add(childGameObject);                
+                __notfoundGameObjects.Add(childGameObject);
             }
             return __notfoundGameObjects;
         }
 
-		static readonly List<GeneratedMeshInstance> __notfoundInstances		= new List<GeneratedMeshInstance>();
-		static MeshInstanceKey[]					__removeMeshInstances	= new MeshInstanceKey[0];
+        static readonly List<GeneratedMeshInstance> __notfoundInstances = new List<GeneratedMeshInstance>();
+        static MeshInstanceKey[] __removeMeshInstances = new MeshInstanceKey[0];
 
-		public static void UpdateContainerComponents(GeneratedMeshes container, 
-													 HashSet<GeneratedMeshInstance> foundInstances,
-													 HashSet<HelperSurfaceDescription> foundHelperSurfaces)
-		{
-			if (RealtimeCSG.CSGModelManager.IsInPlayMode)
-				return;
+        public static void UpdateContainerComponents(GeneratedMeshes container,
+                                                     HashSet<GeneratedMeshInstance> foundInstances,
+                                                     HashSet<HelperSurfaceDescription> foundHelperSurfaces) {
+            if (RealtimeCSG.CSGModelManager.IsInPlayMode)
+                return;
 
-			if (!container || !container.owner)
-				return;
+            if (!container || !container.owner)
+                return;
 
-            if (!container.HasMeshInstances)
-            {
+            if (!container.HasMeshInstances) {
                 var prevModel = container ? container.owner : null;
                 if (ValidateGeneratedMeshesNow(container) && prevModel)
                     prevModel.forceUpdate = true;
             }
 
             var oldMeshes = new HashSet<Mesh>();
-            foreach (var helperSurface in container.HelperSurfaces)
-            {
+            foreach (var helperSurface in container.HelperSurfaces) {
                 if (helperSurface.SharedMesh) oldMeshes.Add(helperSurface.SharedMesh);
             }
-            foreach (var meshInstance in container.MeshInstances)
-            {
+            foreach (var meshInstance in container.MeshInstances) {
                 if (meshInstance.SharedMesh) oldMeshes.Add(meshInstance.SharedMesh);
             }
 
             var newMeshes = new HashSet<Mesh>();
-            foreach (var helperSurface in foundHelperSurfaces)
-            {
+            foreach (var helperSurface in foundHelperSurfaces) {
                 if (!helperSurface.SharedMesh)
                     continue;
                 newMeshes.Add(helperSurface.SharedMesh);
             }
-            foreach (var meshInstance in foundInstances)
-            {
+            foreach (var meshInstance in foundInstances) {
                 if (!meshInstance.SharedMesh)
                     continue;
                 newMeshes.Add(meshInstance.SharedMesh);
             }
 
             container.SetHelperSurfaces(foundHelperSurfaces);
-			container.SetMeshInstances(foundInstances);
+            container.SetMeshInstances(foundInstances);
 
-			__notfoundInstances.Clear();
-			var instances = container.GetComponentsInChildren<GeneratedMeshInstance>(true);
-			if (foundInstances == null)
-			{
-				__notfoundInstances.AddRange(instances);
-			} else
-			{
-				for (int i = 0; i < instances.Length; i++)
-				{
-					var instance = instances[i];
-					if (!foundInstances.Contains(instance))
-					{
-						__notfoundInstances.Add(instance);
-						continue;
-					}
+            __notfoundInstances.Clear();
+            var instances = container.GetComponentsInChildren<GeneratedMeshInstance>(true);
+            if (foundInstances == null) {
+                __notfoundInstances.AddRange(instances);
+            } else {
+                for (int i = 0; i < instances.Length; i++) {
+                    var instance = instances[i];
+                    if (!foundInstances.Contains(instance)) {
+                        __notfoundInstances.Add(instance);
+                        continue;
+                    }
 
-					container.AddMeshInstance(instance);
-				}
-			}
-			
-			for (int i = 0; i < __notfoundInstances.Count; i++)
-			{
-				var meshInstance = __notfoundInstances[i];
-				if (meshInstance && meshInstance.gameObject)
-                {
+                    container.AddMeshInstance(instance);
+                }
+            }
+
+            for (int i = 0; i < __notfoundInstances.Count; i++) {
+                var meshInstance = __notfoundInstances[i];
+                if (meshInstance && meshInstance.gameObject) {
                     //var key = meshInstance.GenerateKey();
                     //var keyObj = EditorUtility.InstanceIDToObject(key.SurfaceParameter);
                     GameObjectExtensions.Destroy(meshInstance.gameObject);
-				}
+                }
 
-				if (__removeMeshInstances.Length < container.MeshInstances.Length)
-				{
-					__removeMeshInstances = new MeshInstanceKey[container.MeshInstances.Length];
-				}
+                if (__removeMeshInstances.Length < container.MeshInstances.Length) {
+                    __removeMeshInstances = new MeshInstanceKey[container.MeshInstances.Length];
+                }
 
-				int removeMeshInstancesCount = 0;
-				foreach(var item in container.MeshInstances)
-				{
-					if (!item ||
-						item == meshInstance)
-					{
-						__removeMeshInstances[removeMeshInstancesCount] = item.GenerateKey();
-						removeMeshInstancesCount++;
-					}
-				}
-				if (removeMeshInstancesCount > 0)
-                {
+                int removeMeshInstancesCount = 0;
+                foreach (var item in container.MeshInstances) {
+                    if (!item ||
+                        item == meshInstance) {
+                        __removeMeshInstances[removeMeshInstancesCount] = item.GenerateKey();
+                        removeMeshInstancesCount++;
+                    }
+                }
+                if (removeMeshInstancesCount > 0) {
                     container.RemoveMeshInstances(__removeMeshInstances, removeMeshInstancesCount);
-				}
-			}
-			 
-			if (!container.owner)
-				return;
+                }
+            }
 
-			UpdateTransform(container);
-		}
-#endregion
-		
-#region UpdateContainerFlags
-		private static void UpdateContainerFlags(GeneratedMeshes generatedMeshes)
-		{
-			if (!generatedMeshes)
-				return;
-            if (generatedMeshes.owner)
-            {
+            if (!container.owner)
+                return;
+
+            UpdateTransform(container);
+        }
+        #endregion
+
+        #region UpdateContainerFlags
+        private static void UpdateContainerFlags(GeneratedMeshes generatedMeshes) {
+            if (!generatedMeshes)
+                return;
+            if (generatedMeshes.owner) {
                 if (CSGPrefabUtility.IsPrefabAsset(generatedMeshes.gameObject) ||
                     CSGPrefabUtility.IsPrefabAsset(generatedMeshes.owner.gameObject))
                     return;
 
                 if (!CSGPrefabUtility.IsPrefabInstance(generatedMeshes.gameObject) &&
-                    !CSGPrefabUtility.IsPrefabInstance(generatedMeshes.owner.gameObject))
-                {
+                    !CSGPrefabUtility.IsPrefabInstance(generatedMeshes.owner.gameObject)) {
                     var ownerTransform = generatedMeshes.owner.transform;
-                    if (generatedMeshes.transform.parent != ownerTransform)
-                    {
+                    if (generatedMeshes.transform.parent != ownerTransform) {
                         generatedMeshes.transform.SetParent(ownerTransform, false);
                     }
 
                     if (!generatedMeshes)
                         return;
                 }
-			}
-
-			//var isTrigger			= container.owner.IsTrigger;
-			//var collidable		= container.owner.HaveCollider || isTrigger;
-			var ownerGameObject     = generatedMeshes.owner.gameObject;
-            var ownerStaticFlags	= GameObjectUtility.GetStaticEditorFlags(ownerGameObject);
-			var previousStaticFlags	= GameObjectUtility.GetStaticEditorFlags(generatedMeshes.gameObject);
-            
-			var containerLayer		= ownerGameObject.layer;
-			
-			var showVisibleSurfaces	= (RealtimeCSG.CSGSettings.VisibleHelperSurfaces & HelperSurfaceFlags.ShowVisibleSurfaces) != 0;
-
-
-			if (ownerStaticFlags != previousStaticFlags
-			    || !ownerGameObject.CompareTag(generatedMeshes.gameObject.tag)
-			    || containerLayer != generatedMeshes.gameObject.layer)
-            {
-                var containerTag = ownerGameObject.tag;
-                foreach (var meshInstance in generatedMeshes.MeshInstances)
-				{
-					if (!meshInstance)
-						continue;
-
-					if (meshInstance.RenderSurfaceType == RenderSurfaceType.Normal)
-                        CSGVisibilityUtility.SetGameObjectVisibility(meshInstance.gameObject, showVisibleSurfaces);
-
-					var oldStaticFlags = GameObjectUtility.GetStaticEditorFlags(meshInstance.gameObject);
-					var newStaticFlags = FilterStaticEditorFlags(oldStaticFlags, meshInstance.RenderSurfaceType);
-
-					foreach (var transform in meshInstance.GetComponentsInChildren<Transform>(true))
-					{
-						var gameObject = transform.gameObject;
-						if (oldStaticFlags != newStaticFlags)
-							GameObjectUtility.SetStaticEditorFlags(gameObject, newStaticFlags);
-						if (!gameObject.CompareTag(containerTag))
-							gameObject.tag = containerTag;
-						if (gameObject.layer != containerLayer)
-							gameObject.layer = containerLayer;
-					}
-				}
             }
 
-			if (generatedMeshes.owner.NeedAutoUpdateRigidBody)
-				AutoUpdateRigidBody(generatedMeshes);
-		}
-#endregion
-	}
+            //var isTrigger			= container.owner.IsTrigger;
+            //var collidable		= container.owner.HaveCollider || isTrigger;
+            var ownerGameObject = generatedMeshes.owner.gameObject;
+            var ownerStaticFlags = GameObjectUtility.GetStaticEditorFlags(ownerGameObject);
+            var previousStaticFlags = GameObjectUtility.GetStaticEditorFlags(generatedMeshes.gameObject);
+
+            var containerLayer = ownerGameObject.layer;
+
+            var showVisibleSurfaces = (RealtimeCSG.CSGSettings.VisibleHelperSurfaces & HelperSurfaceFlags.ShowVisibleSurfaces) != 0;
+
+
+            if (ownerStaticFlags != previousStaticFlags
+                || !ownerGameObject.CompareTag(generatedMeshes.gameObject.tag)
+                || containerLayer != generatedMeshes.gameObject.layer) {
+                var containerTag = ownerGameObject.tag;
+                foreach (var meshInstance in generatedMeshes.MeshInstances) {
+                    if (!meshInstance)
+                        continue;
+
+                    if (meshInstance.RenderSurfaceType == RenderSurfaceType.Normal)
+                        CSGVisibilityUtility.SetGameObjectVisibility(meshInstance.gameObject, showVisibleSurfaces);
+
+                    var oldStaticFlags = GameObjectUtility.GetStaticEditorFlags(meshInstance.gameObject);
+                    var newStaticFlags = FilterStaticEditorFlags(oldStaticFlags, meshInstance.RenderSurfaceType);
+
+                    foreach (var transform in meshInstance.GetComponentsInChildren<Transform>(true)) {
+                        var gameObject = transform.gameObject;
+                        if (oldStaticFlags != newStaticFlags)
+                            GameObjectUtility.SetStaticEditorFlags(gameObject, newStaticFlags);
+                        if (!gameObject.CompareTag(containerTag))
+                            gameObject.tag = containerTag;
+                        if (gameObject.layer != containerLayer)
+                            gameObject.layer = containerLayer;
+                    }
+                }
+            }
+
+            if (generatedMeshes.owner.NeedAutoUpdateRigidBody)
+                AutoUpdateRigidBody(generatedMeshes);
+        }
+        #endregion
+    }
 }

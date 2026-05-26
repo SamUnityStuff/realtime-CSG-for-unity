@@ -133,7 +133,7 @@ namespace RealtimeCSG
             //for (int brushIndex = 0; brushIndex < Brushes.Count; brushIndex++) {
             if (Brushes.Count > 0) {
                 int sliceSize = System.Math.Min(BrushCheckChunk, Brushes.Count);
-                Debug.Log($"Checking transforms {BrushCheckPos} - {(BrushCheckPos + sliceSize) % Brushes.Count}");
+                //Debug.Log($"Checking transforms {BrushCheckPos} - {(BrushCheckPos + sliceSize) % Brushes.Count}");
                 for (int sliceIdx = 0; sliceIdx < sliceSize; sliceIdx++) {
                     // BrushCheckPos = BrushCheckPos + sliceSize % Brushes.Count
                     BrushCheckPos++;

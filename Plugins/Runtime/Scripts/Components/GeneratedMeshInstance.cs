@@ -163,7 +163,6 @@ namespace InternalRealtimeCSG
 		    CachedMeshCollider      = null;
 		    CachedMeshFilter        = null;
 		    CachedMeshRenderer      = null;
-		    CachedMeshRendererSO    = null;
         }
 
 		public MeshInstanceKey GenerateKey()
@@ -202,7 +201,6 @@ namespace InternalRealtimeCSG
 			CachedMeshCollider = null;
 			CachedMeshFilter = null;
 			CachedMeshRenderer = null;
-			CachedMeshRendererSO = null;
 
 			// InstanceIDs are not properly remembered across domain reloads,
 			//	this causes issues on, for instance, first startup of Unity. 

@@ -103,7 +103,8 @@ namespace RealtimeCSG
             for (int i = colliderBakeTimers.Count - 1; i >= 0; i--) {
                 var bakeTimer = colliderBakeTimers[i];
                 if (forceAll || editorTime > bakeTimer.timeToBake) {
-                    bakeTimer.meshCollider.enabled = true; // TODO: bake in background job?
+                    // TODO: bake in background job?
+                    if (bakeTimer.meshCollider != null) { bakeTimer.meshCollider.enabled = true; }
                     colliderBakeTimers.RemoveAtSwapBack(i);
                 }
             }

@@ -142,9 +142,10 @@ namespace InternalRealtimeCSG
             {
                 if (meshInstance)
                 {
-                    if (CSGProjectSettings.Instance.SaveMeshesInSceneFiles || !EditorApplication.isPlayingOrWillChangePlaymode)
+                    if (CSGProjectSettings.Instance.SaveMeshesInSceneFiles || !EditorApplication.isPlayingOrWillChangePlaymode) {
+                        if(meshInstance.CachedMeshCollider) { meshInstance.CachedMeshCollider.enabled = true; }
                         UnityEngine.Object.DestroyImmediate(meshInstance);
-                    else
+                    } else
                         meshInstance.hideFlags |= HideFlags.HideInHierarchy | HideFlags.HideInInspector;
                 }
             }

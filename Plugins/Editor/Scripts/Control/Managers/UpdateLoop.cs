@@ -77,7 +77,7 @@ namespace RealtimeCSG
 			
 			UnityCompilerDefineManager.UpdateUnityDefines();
 
-			InternalCSGModelManagerSystem.Initialize();
+			InternalCSGModelManagerSystem.LazyInitialize();
 		}
 
 #if UNITY_2018_3_OR_NEWER
@@ -275,7 +275,7 @@ namespace RealtimeCSG
 				Debug.LogException(ex);
 			}
 
-			InternalCSGModelManagerSystem.TickCheckTransformChanges();
+			InternalCSGModelManagerSystem.Tick();
         }
 
 		public static void ResetUpdateRoutine()

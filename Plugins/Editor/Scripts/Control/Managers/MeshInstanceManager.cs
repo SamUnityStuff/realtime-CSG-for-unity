@@ -1243,8 +1243,8 @@ namespace InternalRealtimeCSG
             if (needMeshCollider) {
                 if (!meshColliderComponent)
                     meshColliderComponent = gameObject.GetComponent<MeshCollider>();
-                if (meshColliderComponent && !meshColliderComponent.enabled)
-                    meshColliderComponent.enabled = true;
+                // if (meshColliderComponent && !meshColliderComponent.enabled)
+                //     meshColliderComponent.enabled = true;
 
                 if (!meshColliderComponent) {
                     meshColliderComponent = gameObject.AddComponent<MeshCollider>();
@@ -1297,9 +1297,12 @@ namespace InternalRealtimeCSG
                 // .. for some reason this fixes mesh-colliders not being found with ray-casts in the editor?
 #if UNITY_EDITOR
                 if (instance.Dirty) {
-                    meshColliderComponent.enabled = false;
-                    meshColliderComponent.enabled = true;
+                    InternalCSGModelManagerSystem.FlagMeshColliderForCooking(meshColliderComponent);
                 }
+                //if (instance.Dirty) {
+                //    meshColliderComponent.enabled = false;
+                //    meshColliderComponent.enabled = true;
+                //}
 #endif
             } else {
                 if (meshColliderComponent) { meshColliderComponent.hideFlags = HideFlags.None; UnityEngine.Object.DestroyImmediate(meshColliderComponent); instance.Dirty = true; }

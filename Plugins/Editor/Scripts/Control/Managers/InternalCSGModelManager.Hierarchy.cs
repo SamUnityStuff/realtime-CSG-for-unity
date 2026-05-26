@@ -88,7 +88,7 @@ namespace RealtimeCSG
 
         #region CheckTransformChanged
 
-
+        // Slowly moving this into InternalCSGModelManagerSystem.cs
         public static void CheckTransformChanged(bool nothing = false) {
             OLD_SINGLEPASS_CheckTransformChanged();
         }

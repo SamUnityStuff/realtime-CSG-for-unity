@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace RealtimeCSG
 {
@@ -51,7 +52,7 @@ namespace RealtimeCSG
                     var parent = parents[parents.Count - 1];
                     parents.RemoveAt(parents.Count - 1);
                     var children = parent.item.ChildNodes;
-                    for (var i = parent.index; i < children.Length; i++) {
+                    for (var i = parent.index; i < children.Count; i++) {
                         var node = children[i];
                         var nodeID = node.NodeID;
                         if (nodeID == CSGNode.InvalidNodeID) {
@@ -62,9 +63,9 @@ namespace RealtimeCSG
                                 }
                             }
                             if (nodeID == CSGNode.InvalidNodeID) {
-                                if (node.ChildNodes.Length > 0) {
+                                if (node.ChildNodes.Count > 0) {
                                     var next_index = i + 1;
-                                    if (next_index < children.Length) {
+                                    if (next_index < children.Count) {
                                         parent.index = next_index;
                                         parents.Add(parent);
                                     }
@@ -604,7 +605,6 @@ namespace RealtimeCSG
                 OperationTransformChanged.Clear();
             }
 
-
             if (BrushTransformChanged.Count > 0) {
                 foreach (var item in BrushTransformChanged) {
                     if (!item)
@@ -629,7 +629,7 @@ namespace RealtimeCSG
                 External.DestroyNodes(RemovedModels.ToArray()); RemovedModels.Clear();
             }
 
-
+            Profiler.BeginSample("HL: Brush Unregistration");
             for (var i = Brushes.Count - 1; i >= 0; i--) {
                 var item = Brushes[i];
                 if (item && item.brushNodeID != CSGNode.InvalidNodeID)
@@ -637,6 +637,7 @@ namespace RealtimeCSG
 
                 UnregisterBrush(item);
             }
+            Profiler.EndSample();
 
             for (var i = Operations.Count - 1; i >= 0; i--) {
                 var item = Operations[i];
@@ -648,6 +649,7 @@ namespace RealtimeCSG
                 if (!item.ParentData.Transform)
                     item.ParentData.Init(item, item.operationNodeID);
             }
+
 
             for (var i = Models.Length - 1; i >= 0; i--) {
                 var item = Models[i];
@@ -673,6 +675,8 @@ namespace RealtimeCSG
                 ParentNodeDataExtensions.UpdateNodePosition(item.ParentData, parentData);
             }
 
+
+            Profiler.BeginSample("HL: Brush Node Position");
             for (var i = Brushes.Count - 1; i >= 0; i--) {
                 var item = Brushes[i];
                 if (!item || item.brushNodeID == CSGNode.InvalidNodeID)
@@ -684,6 +688,8 @@ namespace RealtimeCSG
 
                 ParentNodeDataExtensions.UpdateNodePosition(item.hierarchyItem, parentData);
             }
+            Profiler.EndSample();
+
 
             if (External.SetChildNodes != null) {
                 for (var i = 0; i < Operations.Count; i++) {

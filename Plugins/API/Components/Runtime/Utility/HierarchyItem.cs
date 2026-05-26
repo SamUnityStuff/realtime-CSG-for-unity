@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using InternalRealtimeCSG;
 using UnityEngine.Rendering;
@@ -16,7 +17,7 @@ namespace RealtimeCSG
 		public int              PrevSiblingIndex    = -1;
 		public int              SiblingIndex        = -1;
 		public Int32            NodeID              = Components.CSGNode.InvalidNodeID;
-		public HierarchyItem[]  ChildNodes          = new HierarchyItem[0];
+		public List<HierarchyItem>  ChildNodes          = new ();
 
 
 		public int LastLoopCount = -1;
@@ -32,7 +33,8 @@ namespace RealtimeCSG
 			PrevSiblingIndex	= -1;
 			SiblingIndex		= -1;
 			NodeID				= Components.CSGNode.InvalidNodeID;
-			ChildNodes			= new HierarchyItem[0];
+			if (ChildNodes == null) { ChildNodes = new(); }
+			ChildNodes.Clear();
 
 			LastLoopCount		= -1;
 			CachedTransformSiblingIndex = 0;

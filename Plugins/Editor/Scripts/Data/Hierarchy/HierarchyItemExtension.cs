@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using RealtimeCSG.Components;
+using System.Runtime.InteropServices;
 
 namespace RealtimeCSG
 {
@@ -10,27 +11,30 @@ namespace RealtimeCSG
 		internal static bool FindSiblingIndex(this HierarchyItem self, Transform searchTransform, int siblingIndex, int searchTransformID, out int index)
 		{
 			if (self.ChildNodes == null ||
-				self.ChildNodes.Length == 0)
+				self.ChildNodes.Count == 0)
 			{
 				index = 0;
 				return false;
 			}
+			Span<HierarchyItem> childNodesSpan = self.ChildNodes.AsSpanUnchecked();
+			int self_ChildNodes_Count = childNodesSpan.Length;
 
 			var checkIndex		 = siblingIndex;
-			var last			 = self.ChildNodes.Length - 1;
+			var last			 = self_ChildNodes_Count - 1;
 			var currentLoopCount = HierarchyItem.CurrentLoopCount;
-
-			if (self.ChildNodes[last].LastLoopCount != currentLoopCount)
+			
+			HierarchyItem self_ChildNodes_Last = childNodesSpan[last];
+			if (self_ChildNodes_Last.LastLoopCount != currentLoopCount)
 			{
-				if (self.ChildNodes[last].Transform != null && self.ChildNodes[last].Transform)
-					self.ChildNodes[last].CachedTransformSiblingIndex = self.ChildNodes[last].Transform.GetSiblingIndex();
+				if (self_ChildNodes_Last.Transform != null && self_ChildNodes_Last.Transform)
+					self_ChildNodes_Last.CachedTransformSiblingIndex = self_ChildNodes_Last.Transform.GetSiblingIndex();
 				else
-					self.ChildNodes[last].CachedTransformSiblingIndex = -1;
-				self.ChildNodes[last].LastLoopCount = currentLoopCount;
+					self_ChildNodes_Last.CachedTransformSiblingIndex = -1;
+				self_ChildNodes_Last.LastLoopCount = currentLoopCount;
 			}
-			if (self.ChildNodes[last].CachedTransformSiblingIndex < checkIndex)
+			if (self_ChildNodes_Last.CachedTransformSiblingIndex < checkIndex)
 			{
-				index = self.ChildNodes.Length;
+				index = self_ChildNodes_Count;
 				return false;
 			}
 
@@ -42,15 +46,16 @@ namespace RealtimeCSG
 				// calculate the midpoint for roughly equal partition
 				var imid = (imin + imax) / 2;
 
-				if (self.ChildNodes[imid].LastLoopCount != currentLoopCount)
+				HierarchyItem self_ChildNodes_imid = childNodesSpan[imid];
+				if (self_ChildNodes_imid.LastLoopCount != currentLoopCount)
 				{
-					if (self.ChildNodes[imid].Transform != null && self.ChildNodes[imid].Transform)
-						self.ChildNodes[imid].CachedTransformSiblingIndex = self.ChildNodes[imid].Transform.GetSiblingIndex();
+					if (self_ChildNodes_imid.Transform != null && self_ChildNodes_imid.Transform)
+						self_ChildNodes_imid.CachedTransformSiblingIndex = self_ChildNodes_imid.Transform.GetSiblingIndex();
 					else
-						self.ChildNodes[imid].CachedTransformSiblingIndex = -1;
-					self.ChildNodes[imid].LastLoopCount = currentLoopCount;
+						self_ChildNodes_imid.CachedTransformSiblingIndex = -1;
+					self_ChildNodes_imid.LastLoopCount = currentLoopCount;
 				}
-				var midKey2 = self.ChildNodes[imid].CachedTransformSiblingIndex;
+				var midKey2 = self_ChildNodes_imid.CachedTransformSiblingIndex;
 
 				// determine which subarray to search
 				if (midKey2 < checkIndex)
@@ -64,25 +69,25 @@ namespace RealtimeCSG
 						// key found at index imid
 
 						index = imid;
-						return (searchTransformID == self.ChildNodes[imid].TransformID);
+						return (searchTransformID == self_ChildNodes_imid.TransformID);
 					}
 					if (imid > 0)
 					{
-						if (self.ChildNodes[imid - 1].LastLoopCount != currentLoopCount)
+						if (childNodesSpan[imid - 1].LastLoopCount != currentLoopCount)
 						{
-							if (self.ChildNodes[imid - 1].Transform != null && self.ChildNodes[imid - 1].Transform)
-								self.ChildNodes[imid - 1].CachedTransformSiblingIndex = self.ChildNodes[imid - 1].Transform.GetSiblingIndex();
+							if (childNodesSpan[imid - 1].Transform != null && childNodesSpan[imid - 1].Transform)
+								childNodesSpan[imid - 1].CachedTransformSiblingIndex = childNodesSpan[imid - 1].Transform.GetSiblingIndex();
 							else
-								self.ChildNodes[imid - 1].CachedTransformSiblingIndex = -1;
-							self.ChildNodes[imid - 1].LastLoopCount = currentLoopCount;
+                                childNodesSpan[imid - 1].CachedTransformSiblingIndex = -1;
+                            childNodesSpan[imid - 1].LastLoopCount = currentLoopCount;
 						}
-						var midKey1 = self.ChildNodes[imid - 1].CachedTransformSiblingIndex;
+						var midKey1 = childNodesSpan[imid - 1].CachedTransformSiblingIndex;
 
 						if (midKey1 < checkIndex)
 						{
 							// key found at index imid
 							index = imid;
-							return (searchTransformID == self.ChildNodes[imid].TransformID);
+							return (searchTransformID == self_ChildNodes_imid.TransformID);
 						}
 					}
 					// change max index to search lower subarray
@@ -97,13 +102,13 @@ namespace RealtimeCSG
 		internal static bool FindSiblingIndex(this HierarchyItem self, HierarchyItem item, out int index)
 		{
 			if (self.ChildNodes == null ||
-				self.ChildNodes.Length == 0)
+				self.ChildNodes.Count == 0)
 			{
 				index = 0;
 				return false;
 			}
 
-			for (var i = 0; i < self.ChildNodes.Length; i++)
+			for (var i = 0; i < self.ChildNodes.Count; i++)
 			{
 				if (item != self.ChildNodes[i])
 					continue;
@@ -136,7 +141,7 @@ namespace RealtimeCSG
 			}
 
 			// make sure item is added in the correct position within the array
-			UnityEditor.ArrayUtility.Insert(ref self.ChildNodes, index, item);
+			self.ChildNodes.Insert(index, item);
 			item.SiblingIndex = index;
 			/*
 			bool childrenModified = false;
@@ -167,19 +172,19 @@ namespace RealtimeCSG
 				return false;
 
 			// make sure item is removed from the array
-			UnityEditor.ArrayUtility.RemoveAt(ref self.ChildNodes, index);
+			self.ChildNodes.RemoveAt(index);
 			//item.siblingIndex = -1;
 			return true;
 		}
 
 		public static IEnumerable<HierarchyItem> IterateChildrenDeep(this HierarchyItem self)
 		{
-			for (var i = 0; i < self.ChildNodes.Length; i++)
+			for (var i = 0; i < self.ChildNodes.Count; i++)
 			{
 				var childNode = self.ChildNodes[i];
 				yield return childNode;
 
-				if (childNode.ChildNodes.Length == 0)
+				if (childNode.ChildNodes.Count == 0)
 					continue;
 
 				foreach (var item in childNode.IterateChildrenDeep())

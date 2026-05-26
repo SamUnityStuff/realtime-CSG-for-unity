@@ -30,7 +30,7 @@ namespace RealtimeCSG
 				if (parent == top)
 					break;
 				iterator = parent;
-			} while (iterator.ChildNodes.Length == 0);
+			} while (iterator.ChildNodes.Count == 0);
 
 			node.Parent = null;
 			top.ChildrenModified = true;
@@ -129,7 +129,7 @@ namespace RealtimeCSG
 							return true;
 						}
 					} else
-					if (iteratorChildIndex < iteratorParentChildNodes.Length - 1)
+					if (iteratorChildIndex < iteratorParentChildNodes.Count - 1)
 					{
 						var nextTransform = iteratorParentChildNodes[iteratorChildIndex + 1].Transform;
 						if (!nextTransform)

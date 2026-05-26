@@ -59,6 +59,7 @@ namespace RealtimeCSG.Components
 		[HideInInspector][NonSerialized] public int								controlMeshGeneration	= 0;
 
 		// this allows us to determine if our brush has changed it's transformation
+		// TODO: eliminate this?
 		[HideInInspector][NonSerialized] public readonly CompareTransformation	compareTransformation	= new CompareTransformation();
 
 		// this allows us to determine if our brush has any of it's surfaces changed

@@ -76,6 +76,8 @@ namespace RealtimeCSG
 			EditorApplication.hierarchyWindowItemOnGUI	+= HierarchyWindowItemGUI.OnHierarchyWindowItemOnGUI;
 			
 			UnityCompilerDefineManager.UpdateUnityDefines();
+
+			InternalCSGModelManagerSystem.Initialize();
 		}
 
 #if UNITY_2018_3_OR_NEWER
@@ -121,6 +123,8 @@ namespace RealtimeCSG
 
 			if (!finalizing)
 				SceneToolRenderer.Cleanup();
+
+			InternalCSGModelManagerSystem.Cleanup();
 		}
 
 		static Scene currentScene;
@@ -270,7 +274,9 @@ namespace RealtimeCSG
 			{
 				Debug.LogException(ex);
 			}
-		}
+
+			InternalCSGModelManagerSystem.TickCheckTransformChanges();
+        }
 
 		public static void ResetUpdateRoutine()
 		{

@@ -1610,16 +1610,6 @@ namespace RealtimeCSG
             EditModeSurfaceGUI.OnSceneGUI(windowRect, this);
             return true;
         }
-        public void OnIMGUIContents() {
-            var models = InternalCSGModelManager.Models;
-            var needLightmapUVUpdate = EditModeCommonGUI.NeedLightmapUVUpdate(models);
-            Rect rect = GUILayoutUtility.GetRect(232 - 8, EditModeSurfaceGUI.surfaceEditWindowHeight - 16); // These values looted from the other call site for OnGUIContents. It's all a holdover before we go full UITK anyway.
-            EditModeSurfaceGUI.OnGUIContents(rect, this, needLightmapUVUpdate);
-        }
-
-        public string GetModeName() {
-            return "Surfaces";
-        }
     }
 }
 

@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 
 namespace RealtimeCSG
 {
-	internal sealed partial class EditModePlaceGUI
+	internal sealed partial class EditmodePlaceGUI
 	{
 		static GUIContent				ContentTitleLabel;
 		

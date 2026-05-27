@@ -16,10 +16,8 @@ namespace RealtimeCSG
 		Rect GetLastSceneGUIRect();
 		bool OnSceneGUI			(Rect windowRect);
 		void OnInspectorGUI		(EditorWindow window, float height);
-        void OnIMGUIContents();
-        string GetModeName();
 
-        void OnDisableTool		();
+		void OnDisableTool		();
 		void OnEnableTool		();
 		bool UndoRedoPerformed	();
 		bool DeselectAll		();

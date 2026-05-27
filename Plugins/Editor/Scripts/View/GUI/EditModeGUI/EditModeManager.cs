@@ -604,28 +604,28 @@ namespace RealtimeCSG
 				SceneDragToolManager.IsDraggingObjectInScene = false;
 			}
 
-			//if (RealtimeCSG.CSGSettings.EnableRealtimeCSG)
-			//{
-			//	if (sceneView && sceneWindowType != EventType.Used && 
-			//		(!SceneDragToolManager.IsDraggingObjectInScene || EditMode == ToolEditMode.Surfaces))
-            //    {
-			//		if (currentEditorWindows.Count == 0)
-			//		{
-            //            
-			//
-			//			try
-			//			{
-			//				Handles.BeginGUI();
-			//				Rect windowRect = new Rect(Vector2.zero, sceneView.position.size); 
-			//				EditModeSelectionGUI.HandleWindowGUI(windowRect);
-			//			}
-			//			finally
-			//			{
-			//				Handles.EndGUI();
-			//			}
-			//		}
-			//	}
-			//}
+			if (RealtimeCSG.CSGSettings.EnableRealtimeCSG)
+			{
+				if (sceneView && sceneWindowType != EventType.Used && 
+					(!SceneDragToolManager.IsDraggingObjectInScene || EditMode == ToolEditMode.Surfaces))
+                {
+					if (currentEditorWindows.Count == 0)
+					{
+                        
+
+						try
+						{
+							Handles.BeginGUI();
+							Rect windowRect = new Rect(Vector2.zero, sceneView.position.size); 
+							EditModeSelectionGUI.HandleWindowGUI(windowRect);
+						}
+						finally
+						{
+							Handles.EndGUI();
+						}
+					}
+				}
+			}
 		}
 
 

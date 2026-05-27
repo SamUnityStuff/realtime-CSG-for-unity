@@ -192,7 +192,7 @@ namespace RealtimeCSG
 					GUILayout.EndVertical();
 				}
 				GUILayout.EndHorizontal();*/
-		internal static void OnGUIContents(bool isSceneGUI, EditModeMeshEdit tool)
+		static void OnGUIContents(bool isSceneGUI, EditModeMeshEdit tool)
 		{
 			EditModeCommonGUI.StartToolGUI();
 

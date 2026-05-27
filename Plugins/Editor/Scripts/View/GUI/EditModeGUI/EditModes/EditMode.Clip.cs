@@ -1679,14 +1679,5 @@ namespace RealtimeCSG
 			EditModeClipGUI.OnSceneGUI(windowRect, this);
 			return true;
 		}
-
-
-        public void OnIMGUIContents() {
-            EditModeClipGUI.OnGUIContents(true, this);
-        }
-
-        public string GetModeName() {
-            return "Clip";
-        }
-    }
+	}
 }

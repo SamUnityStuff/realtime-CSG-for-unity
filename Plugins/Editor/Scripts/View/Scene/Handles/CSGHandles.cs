@@ -327,7 +327,12 @@ namespace RealtimeCSG.Helpers
         }
 
         public static Vector3 PositionHandle(Camera camera, Vector3 position, Quaternion rotation, SnapMode snapMode, Vector3[] snapVertices = null, InitFunction initFunction = null, InitFunction shutdownFunction = null)
-		{	
+		{
+            //Don't draw CSG position handle if selection doesn't contain any CSGNodes
+            if ((EditModeManager.FilteredSelection.NodeTargets == null || EditModeManager.FilteredSelection.NodeTargets.Length == 0) && CSGSettings.SnapNonCSGObjects == false) {
+                return position;
+            }
+
             GUI.SetNextControlName("xAxis");   var xAxisSlider   = GUIUtility.GetControlID (s_xAxisMoveHandleHash, FocusType.Passive);
             GUI.SetNextControlName("yAxis");   var yAxisSlider   = GUIUtility.GetControlID (s_yAxisMoveHandleHash, FocusType.Passive);
             GUI.SetNextControlName("zAxis");   var zAxisSlider   = GUIUtility.GetControlID (s_zAxisMoveHandleHash, FocusType.Passive);

@@ -243,6 +243,30 @@ namespace RealtimeCSG
                 surfaceStates.Length == 0)
             {
                 selectedSurfaces = new SelectedBrushSurface[0];
+
+                // It seems like we can hit a bug where we set our 'currentControl' ID from a surface in surfaceStates[].surfaceControlID[],
+                //      int newControlID = surfaceStates[hoverOnTarget].surfaceControlID[hoverOnSurfaceIndex];
+                // but then we click something, clear that array here, and end up in an unrecoverable UI state.
+                //
+                // 'currentControl' is stuck mapped to a surface that's no longer in selectedSurfaces, and it cuts off UI logic that'd allow you to
+                // select a new surface, starting later at -
+                //      case EventType.Layout: {
+                //          UpdateMouseCursor();
+                //      
+                //          if (currentControl != -1 || // << here!
+                //              camera == null || !camera.pixelRect.Contains(Event.current.mousePosition))
+                //              return;
+
+                // So I'm writing this here, to, when we clear selectedSurfaces, also clear currentControl.
+                // Maybe we can cache the last selected surface control ID, and check if (this.currentControl == *that*), to avoid cases where
+                // (this.currentControl > 0) and we want to preserve that over an UpdateSelectedSurfaces call?
+                // Seems rare, and potentially error-prone (lmao), and I'm a hack. Will leave that in a TODO.
+                // TODO:
+                if (GUIUtility.hotControl == 0 && this.currentControl > 0) {
+                    this.currentControl = -1;
+                    Debug.Log("Performing the fix for Aubrey's selection nightmare.");
+                    //Debug.Log("Resetting surface mode active control");
+                }
                 return;
             }
             

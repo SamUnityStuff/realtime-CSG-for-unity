@@ -471,7 +471,7 @@ namespace RealtimeCSGExtensions
                     }
                 }
                 EditorGUILayout.EndHorizontal();
-                
+
                 EditorGUILayout.Separator();
                 {
                     foldoutAdditionalSettings = EditorGUILayout.Foldout(foldoutAdditionalSettings, "Additional Settings");
@@ -481,6 +481,7 @@ namespace RealtimeCSGExtensions
                         GUILayout.BeginVertical();
                         CSGSettings.CanDragSelectMultipleModels = GUILayout.Toggle(CSGSettings.CanDragSelectMultipleModels, "Can drag-select multiple models");
                         CSGSettings.BrushDimensionsAlwaysVisible = GUILayout.Toggle(CSGSettings.BrushDimensionsAlwaysVisible, "Always show brush dimensions");
+                        CSGSettings.Temp_SelectionIgnorePrefabs = GUILayout.Toggle(CSGSettings.Temp_SelectionIgnorePrefabs, "Ignore Prefabs when selecting brushes");
                         GUILayout.EndVertical();
                         GUILayout.EndHorizontal();
                     }
@@ -497,16 +498,8 @@ namespace RealtimeCSGExtensions
 
                 // ANCHOR STUFF //
                 // Mode select //
-#if false
-                //GlobalGridAnchor.mode = (GlobalGridAnchor.GlobalGridMode)EditorGUILayout.EnumPopup("Grid Mode:", GlobalGridAnchor.mode);
-                GUILayout.BeginHorizontal();
-                    GUILayout.Label("Grid Mode: ", GUILayout.ExpandWidth(false));
-                    GlobalGridAnchor.mode = (GlobalGridAnchor.GlobalGridMode)GUILayout.Toolbar((int)GlobalGridAnchor.mode, GlobalGridAnchor.GlobalGridModeStrings);
-                GUILayout.EndHorizontal();
-                GUILayout.Space(8);
-#else
                 GlobalGridAnchor.mode = GlobalGridAnchor.GlobalGridMode.Anchored;//GUILayout.Toolbar((int)GlobalGridAnchor.mode, GlobalGridAnchor.GlobalGridModeStrings);
-#endif
+
                 // Context-dependent editor //
                 switch (GlobalGridAnchor.mode)
                 {

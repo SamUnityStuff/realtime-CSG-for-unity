@@ -259,7 +259,9 @@ namespace RealtimeCSG
         static public bool					SelectionEdge					= true;
         static public bool					SelectionSurface				= true;
         static public bool					HiddenSurfacesNotSelectable		= true;
-//		static public bool					HiddenSurfacesOrthoSelectable	= true;
+        //		static public bool					HiddenSurfacesOrthoSelectable	= true;
+
+        static public bool Temp_SelectionIgnorePrefabs = false;
 
         static public bool                  ShowTooltips					= true;
         static public bool                  DefaultPreserveUVs

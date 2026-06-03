@@ -170,7 +170,7 @@ namespace RealtimeCSG
 		public static void UpdateSelection(bool forceUpdate = false)
 		{
 			InitTools();
-			
+
 			GetTargetSelection(ref selectedNodes, ref selectedOthers);
 				
 			if (!instance.filteredSelection.UpdateSelection(selectedNodes, selectedOthers) &&
@@ -183,6 +183,9 @@ namespace RealtimeCSG
 			try
 			{
 				InternalCSGModelManager.CheckForChanges(); 
+			}
+			catch (System.Exception e) {
+				Debug.LogException(e);
 			}
 			finally
 			{

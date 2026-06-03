@@ -1,14 +1,16 @@
+using RealtimeCSG;
+using RealtimeCSG.Components;
+using RealtimeCSG.Foundation;
+using RealtimeCSG.Legacy;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq;
-using UnityEngine.SceneManagement;
 using UnityEditor;
-using RealtimeCSG;
-using RealtimeCSG.Legacy;
-using RealtimeCSG.Components;
+using UnityEngine;
+using UnityEngine.Playables;
+using UnityEngine.Pool;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
-using RealtimeCSG.Foundation;
 
 namespace InternalRealtimeCSG
 {
@@ -166,7 +168,9 @@ namespace InternalRealtimeCSG
             Transform prefabBase = null;
             if (PrefabUtility.IsPartOfNonAssetPrefabInstance(go))
             {
-                prefabBase = PrefabUtility.GetOutermostPrefabInstanceRoot(go).transform;
+                if(!CSGSettings.Temp_SelectionIgnorePrefabs && go.GetComponent<CSGNode>()) {
+					prefabBase = PrefabUtility.GetOutermostPrefabInstanceRoot(go).transform;
+				}
             }
 #endif
 
@@ -458,15 +462,29 @@ namespace InternalRealtimeCSG
         {
             public Dictionary<UnityEngine.GameObject, CSGModel>	    generatedComponents;
             public Dictionary<UnityEngine.GameObject, HideFlags>	hideFlags;
+			
+			public static HideFlagsState Create() {
+				var state = new HideFlagsState();
+                state.generatedComponents = DictionaryPool<GameObject, CSGModel>.Get();
+				state.hideFlags = DictionaryPool<GameObject, HideFlags>.Get();
+				
+				state.generatedComponents.Clear();
+				state.hideFlags.Clear();
+				return state;
+            }
+			public static void Release(HideFlagsState state) {
+				if(state.generatedComponents != null) {
+					DictionaryPool<GameObject, CSGModel>.Release(state.generatedComponents);
+				}
+				if(state.hideFlags != null) {
+					DictionaryPool<GameObject, HideFlags>.Release(state.hideFlags);
+				}
+			}
         }
 
         public static HideFlagsState BeginPicking(GameObject[] ignoreGameObjects)
         {
-            var state = new HideFlagsState()
-            {
-                generatedComponents = new Dictionary<UnityEngine.GameObject, CSGModel>(),
-                hideFlags           = new Dictionary<UnityEngine.GameObject, HideFlags>()
-            };
+			var state = HideFlagsState.Create();
 
             foreach(var model in CSGModelManager.GetAllModels())
             {
@@ -511,26 +529,35 @@ namespace InternalRealtimeCSG
         
         public static CSGModel EndPicking(HideFlagsState state, UnityEngine.GameObject pickedObject)
         {
-            if (state == null || state.hideFlags == null)
-                return null;
-            
-            foreach (var pair in state.hideFlags)
-                pair.Key.hideFlags = pair.Value;
-            
-            if (object.Equals(pickedObject, null))
-                return null;
+			CSGModel result = _EndPicking(state, pickedObject);
+            HideFlagsState.Release(state);
+			return result;
+			
+			//
 
-            if (state.generatedComponents == null)
-                return null;
+            static CSGModel _EndPicking(HideFlagsState state, GameObject pickedObject) {
+				if (state == null || state.hideFlags == null)
+					return null;
+            
+				foreach (var pair in state.hideFlags)
+					pair.Key.hideFlags = pair.Value;
+            
+				if (object.Equals(pickedObject, null))
+					return null;
 
-            CSGModel model;
-            if (state.generatedComponents.TryGetValue(pickedObject, out model))
-                return model;
-            return null;
+				if (state.generatedComponents == null)
+					return null;
+
+				CSGModel model;
+				if (state.generatedComponents.TryGetValue(pickedObject, out model))
+					return model;
+				return null;
+			}
         }
 
         static GameObject FindFirstWorldIntersection(Camera camera, Vector2 screenPos, Vector3 worldRayStart, Vector3 worldRayEnd, out MeshRenderer meshRenderer, out int materialIndex, List<GameObject> ignoreGameObjects = null, List<CSGBrush> ignoreBrushes = null, bool ignoreInvisibleSurfaces = true)
         {
+			// Debug.Log("Click");
 			meshRenderer = null;
 			materialIndex = 0;
 

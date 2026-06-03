@@ -168,7 +168,8 @@ namespace InternalRealtimeCSG
             Transform prefabBase = null;
             if (PrefabUtility.IsPartOfNonAssetPrefabInstance(go))
             {
-                if(!CSGSettings.Temp_SelectionIgnorePrefabs && go.GetComponent<CSGNode>()) {
+				bool ignorePrefab = CSGSettings.Temp_SelectionIgnorePrefabs && go.GetComponent<CSGNode>() != null;
+                if (ignorePrefab == false) {
 					prefabBase = PrefabUtility.GetOutermostPrefabInstanceRoot(go).transform;
 				}
             }

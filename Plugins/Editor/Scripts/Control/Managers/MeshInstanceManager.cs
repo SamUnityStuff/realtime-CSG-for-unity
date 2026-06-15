@@ -818,6 +818,9 @@ namespace InternalRealtimeCSG
             EditorSceneManager.MarkSceneDirty(instance.gameObject.scene);
             instance.LightingHashValue = instance.MeshDescription.geometryHashValue;
             instance.HasUV2 = true;
+
+            // SAM: My best guess at stopping people from losing lightmaps
+            EditorUtility.SetDirty(instance.SharedMesh);
         }
 
         private static bool NeedToGenerateLightmapUVsForInstance(GeneratedMeshInstance instance) {

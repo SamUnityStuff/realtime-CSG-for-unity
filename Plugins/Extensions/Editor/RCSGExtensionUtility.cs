@@ -1,7 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using InternalRealtimeCSG;
 using RealtimeCSG;
 using RealtimeCSG.Components;
+using RealtimeCSG.Legacy;
+using System;
+using System.Collections.Generic;
+using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.Pool;
 
 namespace RealtimeCSGExtensions
@@ -99,5 +103,26 @@ namespace RealtimeCSGExtensions
             }
             return surfaces;
         }
+
+        public static void GetVertices(this ControlMesh controlMesh, in ReadOnlySpan<int> halfEdgeIndices, Span<float3> vertices) {
+            Debug.Assert(halfEdgeIndices.Length == vertices.Length);
+            ReadOnlySpan<HalfEdge> cmEdges = controlMesh.Edges;
+            ReadOnlySpan<Vector3> cmVertices = controlMesh.Vertices;
+            
+            for (var i = 0; i < halfEdgeIndices.Length; i++) {
+                int halfEdgeIndex = halfEdgeIndices[i];
+                if (halfEdgeIndex < 0 || halfEdgeIndex >= cmEdges.Length) {
+                    vertices[i] = float3.zero;
+                    continue;
+                }
+                short vertexIndex = cmEdges[halfEdgeIndex].VertexIndex;
+                if (vertexIndex < 0 || vertexIndex >= cmVertices.Length) {
+                    vertices[i] = float3.zero;
+                    continue;
+                }
+                vertices[i] = cmVertices[vertexIndex];
+            }
+        }
+
     }
 }

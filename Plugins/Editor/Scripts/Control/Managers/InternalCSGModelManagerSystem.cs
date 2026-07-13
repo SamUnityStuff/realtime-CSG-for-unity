@@ -1,9 +1,9 @@
 using InternalRealtimeCSG;
 using RealtimeCSG.Components;
-using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
-using static UnityEngine.ObjectDispatcher;
+using RealtimeCSG.UnityWrappers;
+using static RealtimeCSG.UnityWrappers.ObjectDispatcher;
 
 namespace RealtimeCSG
 {
@@ -25,7 +25,7 @@ namespace RealtimeCSG
         }
 
         public static void Cleanup() {
-            if(dispatcher != null) { dispatcher.Dispose(); dispatcher = null; }
+            if (dispatcher != null) { dispatcher.Dispose(); dispatcher = null; }
             ColliderBakePopAll();
             EditorApplication.playModeStateChanged -= PlaymodeStateChanged;
         }
@@ -105,8 +105,15 @@ namespace RealtimeCSG
                 if (forceAll || editorTime > bakeTimer.timeToBake) {
                     // TODO: bake in background job?
                     if (bakeTimer.meshCollider != null) { bakeTimer.meshCollider.enabled = true; }
-                    colliderBakeTimers.RemoveAtSwapBack(i);
+                    RemoveAtSwapBack(colliderBakeTimers, i);
                 }
+            }
+            
+            // for compatibility if we don't have Unity's package with this function installed...
+            static void RemoveAtSwapBack<T>(System.Collections.Generic.List<T> list, int i) {
+                int lastIdx = list.Count - 1;
+                list[i] = list[lastIdx];
+                list.RemoveAt(lastIdx);
             }
         }
 

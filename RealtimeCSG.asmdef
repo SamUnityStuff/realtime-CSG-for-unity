@@ -1,23 +1,24 @@
 {
-  "name": "RealtimeCSG",
-  "rootNamespace": "RealtimeCSG",
+    "name": "RealtimeCSG",
+    "rootNamespace": "RealtimeCSG",
     "references": [
-        "GUID:d8b63aba1907145bea998dd612889d6b"
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:4fd6538c1c56b409fb53fdf0183170ec"
     ],
-  "includePlatforms": [
-    "Editor",
-    "macOSStandalone",
-    "WindowsStandalone32",
-    "WindowsStandalone64"
-  ],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [],
-  "autoReferenced": true,
-  "defineConstraints": [
-    "UNITY_EDITOR"
-  ],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "includePlatforms": [
+        "Editor",
+        "macOSStandalone",
+        "WindowsStandalone32",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

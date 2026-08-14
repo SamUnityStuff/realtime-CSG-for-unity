@@ -1357,6 +1357,18 @@ namespace RealtimeCSG
 
 		public void HandleEvents(SceneView sceneView, Rect sceneRect)
 		{
+			// COMPLETE HACK
+			if(Tools.current == Tool.Custom) {
+				if(CageSelectionTool.IsProbablyActive()) {
+					CageSelectionTool.ONTOOLGUI(sceneView);
+					if(Event.current.type == EventType.MouseDown && Event.current.button == 0) {
+						Event.current.Use();
+					}
+                    //CSGRenderer.DrawSelectedBrushes(zTestLineMeshManager, noZTestLineMeshManager, brushNodeIDs, brushTransformations, ColorSettings.SelectedOutlines, GUIConstants.lineScale);
+                }
+                //return;
+			}
+
 			var camera				= sceneView.camera;
 			var inCamera			= (camera != null) && camera.pixelRect.Contains(Event.current.mousePosition);
 
